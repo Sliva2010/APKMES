@@ -23,7 +23,17 @@ class ChatListScreen extends ConsumerWidget {
         actions: <Widget>[
           IconButton(
             icon: const Icon(Icons.search_rounded),
-            onPressed: () {},
+            onPressed: () {
+              HapticsService.tap();
+              context.push('/search');
+            },
+          ),
+          IconButton(
+            icon: const Icon(Icons.dashboard_customize_outlined),
+            onPressed: () {
+              HapticsService.tap();
+              context.push('/tools');
+            },
           ),
           IconButton(
             icon: const Icon(Icons.tune_rounded),
@@ -58,6 +68,7 @@ class ChatListScreen extends ConsumerWidget {
         elevation: 0,
         onPressed: () {
           HapticsService.tap();
+          context.push('/chats/new');
         },
         child: const Icon(Icons.edit_rounded),
       ),

@@ -44,6 +44,14 @@ class SettingsScreen extends ConsumerWidget {
               },
             ),
             const SizedBox(height: 12),
+            _SectionHeader(label: 'Инструменты'),
+            _Tile(
+              title: 'Мини-инструменты',
+              subtitle: 'Калькулятор, таймер, переводчик',
+              icon: Icons.dashboard_customize_outlined,
+              onTap: () => context.push('/tools'),
+            ),
+            const SizedBox(height: 12),
             _SectionHeader(label: 'Безопасность'),
             _Tile(
               title: 'Двухфакторная аутентификация',

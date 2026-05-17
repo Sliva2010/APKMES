@@ -1,6 +1,5 @@
 // Роутер NOCTIS на go_router.
 // Все переходы идут через это место для единого UX.
-import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -12,6 +11,11 @@ import '../../features/auth/profile_setup_screen.dart';
 import '../../features/auth/welcome_screen.dart';
 import '../../features/chats/chat_list_screen.dart';
 import '../../features/chats/direct_chat_screen.dart';
+import '../../features/chats/new_chat_screen.dart';
+import '../../features/mini_tools/calculator_tool.dart';
+import '../../features/mini_tools/mini_tools_screen.dart';
+import '../../features/mini_tools/timer_tool.dart';
+import '../../features/search/search_screen.dart';
 import '../../features/settings/settings_screen.dart';
 import '../animation/durations_curves.dart';
 
@@ -80,11 +84,38 @@ final Provider<GoRouterConfig> routerProvider = Provider<GoRouterConfig>((
             _buildPage(state, const ChatListScreen()),
         routes: <RouteBase>[
           GoRoute(
+            path: 'new',
+            pageBuilder: (BuildContext context, GoRouterState state) =>
+                _buildPage(state, const NewChatScreen()),
+          ),
+          GoRoute(
             path: ':chatId',
             pageBuilder: (BuildContext context, GoRouterState state) {
               final String chatId = state.pathParameters['chatId'] ?? '';
               return _buildPage(state, DirectChatScreen(chatId: chatId));
             },
+          ),
+        ],
+      ),
+      GoRoute(
+        path: '/search',
+        pageBuilder: (BuildContext context, GoRouterState state) =>
+            _buildPage(state, const SearchScreen()),
+      ),
+      GoRoute(
+        path: '/tools',
+        pageBuilder: (BuildContext context, GoRouterState state) =>
+            _buildPage(state, const MiniToolsScreen()),
+        routes: <RouteBase>[
+          GoRoute(
+            path: 'calculator',
+            pageBuilder: (BuildContext context, GoRouterState state) =>
+                _buildPage(state, const CalculatorTool()),
+          ),
+          GoRoute(
+            path: 'timer',
+            pageBuilder: (BuildContext context, GoRouterState state) =>
+                _buildPage(state, const TimerTool()),
           ),
         ],
       ),
