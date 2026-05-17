@@ -1,0 +1,26 @@
+# Default: autodetect text vs binary
+*           text=auto
+
+# Linux/macOS scripts must keep LF endings
+*.sh        text eol=lf
+*.bash      text eol=lf
+Makefile    text eol=lf
+
+# YAML and Docker configs are usually consumed on Linux
+*.yml       text eol=lf
+*.yaml      text eol=lf
+Dockerfile  text eol=lf
+
+# Windows-specific
+*.bat       text eol=crlf
+*.cmd       text eol=crlf
+*.ps1       text eol=crlf
+
+# Binary files: never touch
+*.png       binary
+*.jpg       binary
+*.jpeg      binary
+*.ico       binary
+*.keystore  binary
+*.jks       binary
+*.apk       binary
