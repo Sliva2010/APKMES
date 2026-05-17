@@ -1,7 +1,12 @@
 // Контроллер аутентификации.
-// На текущем этапе использует мок-OTP "000000" для офлайн-демо.
+//
+// Если `--dart-define=BACKEND_URL=...` задан — выполняет реальные REST-запросы
+// к NOCTIS-бэкенду. В демо-режиме (URL пуст) принимает код `000000`.
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../../core/network/auth_api.dart';
+import '../../core/network/backend_config.dart';
 
 enum AuthStatus { unauthenticated, codeSent, profilePending, authenticated }
 
@@ -13,6 +18,9 @@ class AuthState {
     this.displayName,
     this.username,
     this.errorCode,
+    this.access,
+    this.refresh,
+    this.userId,
   });
 
   final AuthStatus status;
@@ -20,6 +28,9 @@ class AuthState {
   final String? displayName;
   final String? username;
   final String? errorCode;
+  final String? access;
+  final String? refresh;
+  final int? userId;
 
   AuthState copyWith({
     AuthStatus? status,
@@ -27,6 +38,9 @@ class AuthState {
     String? displayName,
     String? username,
     String? errorCode,
+    String? access,
+    String? refresh,
+    int? userId,
     bool clearError = false,
   }) {
     return AuthState(
@@ -35,6 +49,9 @@ class AuthState {
       displayName: displayName ?? this.displayName,
       username: username ?? this.username,
       errorCode: clearError ? null : (errorCode ?? this.errorCode),
+      access: access ?? this.access,
+      refresh: refresh ?? this.refresh,
+      userId: userId ?? this.userId,
     );
   }
 
@@ -45,12 +62,21 @@ class AuthState {
 class AuthController extends StateNotifier<AuthState> {
   AuthController() : super(AuthState.initial);
 
-  /// Мок-код для отладки UX без подключённого бэкенда.
   static const String mockOtp = '000000';
+  final AuthApi _api = AuthApi();
 
   Future<void> requestCode(String phoneE164) async {
     state = state.copyWith(clearError: true);
-    await Future<void>.delayed(const Duration(milliseconds: 600));
+    if (BackendConfig.isConfigured) {
+      try {
+        await _api.startPhone(phoneE164);
+      } catch (_) {
+        // Сетевая ошибка не блокирует UX — пользователь всё равно перейдёт
+        // на экран кода. Реальный backend отдаст ошибку при verify.
+      }
+    } else {
+      await Future<void>.delayed(const Duration(milliseconds: 600));
+    }
     state = state.copyWith(
       status: AuthStatus.codeSent,
       phoneE164: phoneE164,
@@ -59,7 +85,25 @@ class AuthController extends StateNotifier<AuthState> {
   }
 
   Future<bool> verifyCode(String code) async {
-    await Future<void>.delayed(const Duration(milliseconds: 700));
+    final String phone = state.phoneE164 ?? '';
+    if (BackendConfig.isConfigured) {
+      try {
+        final TokenPair pair = await _api.verifyPhone(phone, code.trim());
+        state = state.copyWith(
+          status: AuthStatus.profilePending,
+          access: pair.access,
+          refresh: pair.refresh,
+          userId: pair.userId,
+          clearError: true,
+        );
+        return true;
+      } catch (_) {
+        state = state.copyWith(errorCode: 'INVALID_OTP');
+        return false;
+      }
+    }
+
+    await Future<void>.delayed(const Duration(milliseconds: 500));
     if (code.trim() == mockOtp) {
       state = state.copyWith(
         status: AuthStatus.profilePending,
@@ -75,7 +119,7 @@ class AuthController extends StateNotifier<AuthState> {
     required String displayName,
     required String username,
   }) async {
-    await Future<void>.delayed(const Duration(milliseconds: 400));
+    await Future<void>.delayed(const Duration(milliseconds: 300));
     state = state.copyWith(
       status: AuthStatus.authenticated,
       displayName: displayName,
@@ -86,6 +130,12 @@ class AuthController extends StateNotifier<AuthState> {
 
   Future<void> logout() async {
     state = AuthState.initial;
+  }
+
+  @override
+  void dispose() {
+    _api.close();
+    super.dispose();
   }
 }
 

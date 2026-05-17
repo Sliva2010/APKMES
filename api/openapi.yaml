@@ -1,0 +1,188 @@
+openapi: 3.1.0
+info:
+  title: NOCTIS API
+  version: "0.1.0"
+  description: >
+    REST contract for the NOCTIS messenger MVP. Real-time delivery is handled
+    over WebSocket at `/ws` (see `api/ws-protocol.json`).
+
+servers:
+  - url: https://api.noctis.example
+    description: Production
+  - url: http://localhost:8080
+    description: Local dev
+
+paths:
+  /healthz:
+    get:
+      summary: Liveness probe
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                  service:
+                    type: string
+
+  /api/v1/auth/phone/start:
+    post:
+      summary: Send OTP to a phone number
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [phone]
+              properties:
+                phone:
+                  type: string
+                  pattern: "^\\+[1-9]\\d{7,14}$"
+      responses:
+        "200": { description: "Code dispatched" }
+        "400": { $ref: "#/components/responses/Error" }
+        "429": { $ref: "#/components/responses/Error" }
+
+  /api/v1/auth/phone/verify:
+    post:
+      summary: Exchange OTP for token pair
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [phone, code]
+              properties:
+                phone:
+                  type: string
+                code:
+                  type: string
+                  minLength: 6
+                  maxLength: 6
+      responses:
+        "200":
+          description: Token pair
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TokenPair"
+        "422": { $ref: "#/components/responses/Error" }
+
+  /api/v1/auth/refresh:
+    post:
+      summary: Renew access token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [refresh]
+              properties:
+                refresh:
+                  type: string
+      responses:
+        "200":
+          description: Token pair
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TokenPair"
+        "401": { $ref: "#/components/responses/Error" }
+
+  /api/v1/chats/{id}/messages:
+    parameters:
+      - in: path
+        name: id
+        required: true
+        schema: { type: integer, format: int64 }
+    get:
+      summary: Recent messages
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: limit
+          schema: { type: integer, default: 50, maximum: 200 }
+      responses:
+        "200":
+          description: List
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  messages:
+                    type: array
+                    items: { $ref: "#/components/schemas/Message" }
+    post:
+      summary: Send a text message (idempotent by client_message_id)
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [client_message_id, body]
+              properties:
+                client_message_id:
+                  type: string
+                  format: uuid
+                body:
+                  type: string
+                  maxLength: 4096
+      responses:
+        "200":
+          description: Stored message
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Message" }
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    TokenPair:
+      type: object
+      required: [access, refresh, user_id]
+      properties:
+        access: { type: string }
+        refresh: { type: string }
+        user_id: { type: integer, format: int64 }
+    Message:
+      type: object
+      required: [id, chat_id, seq, sender_id, body, created_at]
+      properties:
+        id: { type: integer, format: int64 }
+        chat_id: { type: integer, format: int64 }
+        seq: { type: integer, format: int64 }
+        sender_id: { type: integer, format: int64 }
+        body: { type: string }
+        created_at: { type: string, format: date-time }
+
+  responses:
+    Error:
+      description: Error envelope
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: object
+                required: [code]
+                properties:
+                  code: { type: string }
+                  message: { type: string }

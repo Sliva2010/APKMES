@@ -1,0 +1,46 @@
+{
+  "title": "NOCTIS WebSocket envelope",
+  "description": "Each frame on /ws must be a JSON object matching this schema. payload schemas are dispatched by the type field.",
+  "type": "object",
+  "required": ["type"],
+  "additionalProperties": false,
+  "properties": {
+    "type": {
+      "type": "string",
+      "enum": [
+        "auth.ok",
+        "subscribe",
+        "message.send",
+        "message.ack",
+        "message.new",
+        "error"
+      ]
+    },
+    "payload": { "type": "object" }
+  },
+  "$defs": {
+    "MessageSendPayload": {
+      "type": "object",
+      "required": ["chat_id", "client_message_id", "body"],
+      "additionalProperties": false,
+      "properties": {
+        "chat_id": { "type": "integer", "minimum": 1 },
+        "client_message_id": { "type": "string", "format": "uuid" },
+        "body": { "type": "string", "minLength": 1, "maxLength": 4096 }
+      }
+    },
+    "Message": {
+      "type": "object",
+      "required": ["id", "chat_id", "seq", "sender_id", "body", "created_at"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "type": "integer" },
+        "chat_id": { "type": "integer" },
+        "seq": { "type": "integer" },
+        "sender_id": { "type": "integer" },
+        "body": { "type": "string" },
+        "created_at": { "type": "string", "format": "date-time" }
+      }
+    }
+  }
+}

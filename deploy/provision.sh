@@ -151,7 +151,7 @@ EOF
 
 write_compose() {
   log "Запись docker-compose.yml..."
-  cat >"$NOCTIS_DIR/docker-compose.yml" <<'YAML'
+  cat >"$NOCTIS_DIR/docker-compose.yml" <<YAML
 services:
   postgres:
     image: postgres:15
@@ -160,7 +160,7 @@ services:
     volumes:
       - /var/lib/noctis/pg:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      test: ["CMD-SHELL", "pg_isready -U \$\$POSTGRES_USER -d \$\$POSTGRES_DB"]
       interval: 10s
       timeout: 5s
       retries: 10
@@ -169,11 +169,11 @@ services:
     image: redis:7-alpine
     restart: unless-stopped
     env_file: .env
-    command: ["sh", "-c", "redis-server --appendonly yes --requirepass $$REDIS_PASSWORD"]
+    command: ["sh", "-c", "redis-server --appendonly yes --requirepass \$\$REDIS_PASSWORD"]
     volumes:
       - /var/lib/noctis/redis:/data
     healthcheck:
-      test: ["CMD-SHELL", "redis-cli -a $$REDIS_PASSWORD PING | grep -q PONG"]
+      test: ["CMD-SHELL", "redis-cli -a \$\$REDIS_PASSWORD PING | grep -q PONG"]
       interval: 10s
       timeout: 3s
       retries: 10
@@ -183,8 +183,8 @@ services:
     restart: unless-stopped
     command: server /data --console-address ":9001"
     environment:
-      MINIO_ROOT_USER: ${S3_ACCESS_KEY}
-      MINIO_ROOT_PASSWORD: ${S3_SECRET_KEY}
+      MINIO_ROOT_USER: \${S3_ACCESS_KEY}
+      MINIO_ROOT_PASSWORD: \${S3_SECRET_KEY}
     volumes:
       - /var/lib/noctis/minio:/data
     healthcheck:
@@ -192,6 +192,22 @@ services:
       interval: 15s
       timeout: 5s
       retries: 10
+
+  backend:
+    image: ghcr.io/sliva2010/apkmes-backend:latest
+    restart: unless-stopped
+    pull_policy: always
+    env_file: .env
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis:    { condition: service_healthy }
+    ports:
+      - "127.0.0.1:8080:8080"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8080/healthz"]
+      interval: 15s
+      timeout: 5s
+      retries: 8
 YAML
 }
 
@@ -202,8 +218,34 @@ server {
     listen 80;
     server_name ${DOMAIN:-_};
 
+    client_max_body_size 64M;
+
+    location /healthz {
+        proxy_pass http://127.0.0.1:8080/healthz;
+        proxy_http_version 1.1;
+    }
+
+    location /api/ {
+        proxy_pass http://127.0.0.1:8080;
+        proxy_http_version 1.1;
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
+    }
+
+    location /ws {
+        proxy_pass http://127.0.0.1:8080/ws;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade \$http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_set_header Host \$host;
+        proxy_read_timeout 3600;
+        proxy_send_timeout 3600;
+    }
+
     location / {
-        return 200 'NOCTIS backend placeholder. Deploy backend container to enable API.';
+        return 200 'NOCTIS API. See /healthz';
         add_header Content-Type text/plain;
     }
 }
