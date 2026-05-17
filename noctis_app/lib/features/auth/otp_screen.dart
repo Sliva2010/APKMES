@@ -1,5 +1,4 @@
-// Экран ввода 6-значного кода подтверждения.
-// Шесть отдельных ячеек с автопереходом и мгновенной верификацией.
+// Премиальный экран ввода 6-значного OTP-кода NOCTIS.
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -9,6 +8,7 @@ import '../../core/animation/durations_curves.dart';
 import '../../core/animation/haptics_service.dart';
 import '../../core/theme/monochrome_palette.dart';
 import 'auth_controller.dart';
+import 'welcome_background.dart';
 
 class OtpInputScreen extends ConsumerStatefulWidget {
   const OtpInputScreen({super.key, required this.phone});
@@ -48,7 +48,8 @@ class _OtpInputScreenState extends ConsumerState<OtpInputScreen> {
     super.dispose();
   }
 
-  String get _code => _controllers.map((TextEditingController c) => c.text).join();
+  String get _code =>
+      _controllers.map((TextEditingController c) => c.text).join();
 
   Future<void> _verify() async {
     if (_code.length != _length || _busy) return;
@@ -92,91 +93,148 @@ class _OtpInputScreenState extends ConsumerState<OtpInputScreen> {
   Widget build(BuildContext context) {
     final ThemeData theme = Theme.of(context);
     return Scaffold(
-      appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 18),
-          onPressed: () => context.pop(),
-        ),
-      ),
-      body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(24, 12, 24, 24),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: <Widget>[
-              const SizedBox(height: 8),
-              Text('Подтвердите номер',
-                  style: theme.textTheme.displayMedium),
-              const SizedBox(height: 12),
-              Text(
-                'Мы отправили 6-значный код на ${widget.phone}.\n'
-                'Для демо введите 000000.',
-                style: theme.textTheme.bodyMedium,
-              ),
-              const SizedBox(height: 36),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: <Widget>[
-                  for (int i = 0; i < _length; i++)
-                    _OtpCell(
-                      controller: _controllers[i],
-                      focusNode: _nodes[i],
-                      onChanged: (String v) => _onChange(i, v),
-                      hasError: _errorText != null,
-                    ),
-                ],
-              ),
-              const SizedBox(height: 16),
-              AnimatedSwitcher(
-                duration: NoctisDurations.tap,
-                child: _errorText == null
-                    ? const SizedBox(height: 20)
-                    : Text(
-                        _errorText!,
-                        key: ValueKey<String>(_errorText!),
-                        style: theme.textTheme.bodyMedium?.copyWith(
+      body: WelcomeBackground(
+        child: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: <Widget>[
+                Row(
+                  children: <Widget>[
+                    GestureDetector(
+                      onTap: () => context.pop(),
+                      child: Container(
+                        width: 44,
+                        height: 44,
+                        alignment: Alignment.center,
+                        decoration: BoxDecoration(
+                          color: theme.colorScheme.surface,
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: theme.colorScheme.outlineVariant,
+                            width: 1,
+                          ),
+                        ),
+                        child: Icon(
+                          Icons.arrow_back_ios_new_rounded,
+                          size: 16,
                           color: theme.colorScheme.onSurface,
                         ),
                       ),
-              ),
-              const Spacer(),
-              if (_busy)
-                Center(
-                  child: SizedBox(
-                    height: 22,
-                    width: 22,
-                    child: CircularProgressIndicator(
-                      color: theme.colorScheme.onSurface,
-                      strokeWidth: 2,
                     ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                Container(
+                  width: 56,
+                  height: 56,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.onSurface,
+                    borderRadius: BorderRadius.circular(18),
+                  ),
+                  child: Icon(
+                    Icons.lock_outline_rounded,
+                    color: theme.colorScheme.surface,
+                    size: 26,
                   ),
                 ),
-              const SizedBox(height: 12),
-              TextButton(
-                onPressed: () async {
-                  await ref
-                      .read(authControllerProvider.notifier)
-                      .requestCode(widget.phone);
-                  await HapticsService.tap();
-                  if (!mounted) return;
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      backgroundColor: theme.colorScheme.surface,
-                      content: Text(
-                        'Код отправлен повторно',
-                        style: theme.textTheme.bodyMedium,
+                const SizedBox(height: 20),
+                Text(
+                  'Подтвердите\nномер',
+                  style: theme.textTheme.displayMedium?.copyWith(
+                    height: 1.05,
+                    letterSpacing: -1,
+                  ),
+                ),
+                const SizedBox(height: 10),
+                RichText(
+                  text: TextSpan(
+                    style: theme.textTheme.bodyMedium?.copyWith(height: 1.5),
+                    children: <TextSpan>[
+                      const TextSpan(text: 'Мы отправили 6-значный код на '),
+                      TextSpan(
+                        text: widget.phone,
+                        style: TextStyle(
+                          color: MonochromePalette.guard(
+                              theme.colorScheme.onSurface),
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const TextSpan(text: '.\nДля демо введите 000000.'),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 32),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: <Widget>[
+                    for (int i = 0; i < _length; i++)
+                      _OtpCell(
+                        controller: _controllers[i],
+                        focusNode: _nodes[i],
+                        onChanged: (String v) => _onChange(i, v),
+                        hasError: _errorText != null,
+                      ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                AnimatedSwitcher(
+                  duration: NoctisDurations.tap,
+                  child: _errorText == null
+                      ? const SizedBox(height: 20)
+                      : Text(
+                          _errorText!,
+                          key: ValueKey<String>(_errorText!),
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            color: theme.colorScheme.onSurface,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                ),
+                const Spacer(),
+                if (_busy)
+                  Center(
+                    child: SizedBox(
+                      height: 22,
+                      width: 22,
+                      child: CircularProgressIndicator(
+                        color: theme.colorScheme.onSurface,
+                        strokeWidth: 2,
                       ),
                     ),
-                  );
-                },
-                child: Text(
-                  'Отправить код снова',
-                  style: theme.textTheme.labelLarge?.copyWith(
-                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                const SizedBox(height: 12),
+                Center(
+                  child: TextButton.icon(
+                    onPressed: () async {
+                      await ref
+                          .read(authControllerProvider.notifier)
+                          .requestCode(widget.phone);
+                      await HapticsService.tap();
+                      if (!mounted) return;
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          backgroundColor: theme.colorScheme.surface,
+                          content: Text(
+                            'Код отправлен повторно',
+                            style: theme.textTheme.bodyMedium,
+                          ),
+                        ),
+                      );
+                    },
+                    icon: const Icon(Icons.refresh_rounded, size: 18),
+                    label: Text(
+                      'Отправить код снова',
+                      style: theme.textTheme.labelLarge?.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
+                    ),
                   ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
@@ -201,9 +259,10 @@ class _OtpCell extends StatelessWidget {
   Widget build(BuildContext context) {
     final ThemeData theme = Theme.of(context);
     final bool focused = focusNode.hasFocus;
+    final bool filled = controller.text.isNotEmpty;
     final Color border = hasError
         ? theme.colorScheme.onSurface
-        : focused
+        : focused || filled
             ? theme.colorScheme.onSurface
             : theme.colorScheme.outlineVariant;
     return AnimatedContainer(
@@ -212,7 +271,9 @@ class _OtpCell extends StatelessWidget {
       width: 48,
       height: 64,
       decoration: BoxDecoration(
-        color: theme.colorScheme.surface,
+        color: filled
+            ? theme.colorScheme.onSurface
+            : theme.colorScheme.surface,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
           color: MonochromePalette.guard(border),
@@ -226,8 +287,15 @@ class _OtpCell extends StatelessWidget {
         textAlign: TextAlign.center,
         keyboardType: TextInputType.number,
         maxLength: 1,
-        cursorColor: theme.colorScheme.onSurface,
-        style: theme.textTheme.headlineMedium,
+        cursorColor: filled
+            ? theme.colorScheme.surface
+            : theme.colorScheme.onSurface,
+        style: theme.textTheme.headlineMedium?.copyWith(
+          color: filled
+              ? theme.colorScheme.surface
+              : theme.colorScheme.onSurface,
+          fontWeight: FontWeight.w700,
+        ),
         decoration: const InputDecoration(
           counterText: '',
           border: InputBorder.none,

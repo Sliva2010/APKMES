@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../features/auth/auth_controller.dart';
+import '../../features/auth/onboarding_screen.dart';
 import '../../features/auth/otp_screen.dart';
 import '../../features/auth/phone_screen.dart';
 import '../../features/auth/profile_setup_screen.dart';
@@ -41,13 +42,14 @@ final Provider<GoRouterConfig> routerProvider = Provider<GoRouterConfig>((
   });
 
   final GoRouter router = GoRouter(
-    initialLocation: '/welcome',
+    initialLocation: '/onboarding',
     debugLogDiagnostics: false,
     refreshListenable: notifier,
     redirect: (BuildContext context, GoRouterState state) {
       final AuthStatus status = ref.read(authControllerProvider).status;
       final bool authed = status == AuthStatus.authenticated;
       final bool atAuthRoute = state.matchedLocation.startsWith('/welcome') ||
+          state.matchedLocation.startsWith('/onboarding') ||
           state.matchedLocation.startsWith('/phone') ||
           state.matchedLocation.startsWith('/otp') ||
           state.matchedLocation.startsWith('/profile-setup');
@@ -56,11 +58,16 @@ final Provider<GoRouterConfig> routerProvider = Provider<GoRouterConfig>((
         return '/chats';
       }
       if (!authed && !atAuthRoute) {
-        return '/welcome';
+        return '/onboarding';
       }
       return null;
     },
     routes: <RouteBase>[
+      GoRoute(
+        path: '/onboarding',
+        pageBuilder: (BuildContext context, GoRouterState state) =>
+            _buildPage(state, const OnboardingScreen()),
+      ),
       GoRoute(
         path: '/welcome',
         pageBuilder: (BuildContext context, GoRouterState state) =>
