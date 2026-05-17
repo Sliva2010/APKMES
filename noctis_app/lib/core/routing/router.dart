@@ -17,9 +17,12 @@ import '../../features/chats/direct_chat_screen.dart';
 import '../../features/chats/new_chat_screen.dart';
 import '../../features/discover/discover_screen.dart';
 import '../../features/hub/hub_shell.dart';
+import '../../features/mini_tools/bill_split_tool.dart';
 import '../../features/mini_tools/calculator_tool.dart';
 import '../../features/mini_tools/mini_tools_screen.dart';
+import '../../features/mini_tools/qr_tool.dart';
 import '../../features/mini_tools/timer_tool.dart';
+import '../../features/mini_tools/translator_tool.dart';
 import '../../features/premium/premium_screen.dart';
 import '../../features/search/search_screen.dart';
 import '../../features/settings/appearance_screen.dart';
@@ -193,6 +196,27 @@ final Provider<GoRouterConfig> routerProvider =
                     pageBuilder:
                         (BuildContext context, GoRouterState state) =>
                             _buildPage(state, const TimerTool()),
+                  ),
+                  GoRoute(
+                    path: 'qr',
+                    parentNavigatorKey: _rootKey,
+                    pageBuilder:
+                        (BuildContext context, GoRouterState state) =>
+                            _buildPage(state, const QrTool()),
+                  ),
+                  GoRoute(
+                    path: 'translator',
+                    parentNavigatorKey: _rootKey,
+                    pageBuilder:
+                        (BuildContext context, GoRouterState state) =>
+                            _buildPage(state, const TranslatorTool()),
+                  ),
+                  GoRoute(
+                    path: 'bill',
+                    parentNavigatorKey: _rootKey,
+                    pageBuilder:
+                        (BuildContext context, GoRouterState state) =>
+                            _buildPage(state, const BillSplitTool()),
                   ),
                 ],
               ),

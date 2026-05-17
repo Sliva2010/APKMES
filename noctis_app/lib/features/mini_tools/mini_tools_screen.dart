@@ -13,11 +13,12 @@ class MiniToolsScreen extends StatelessWidget {
     final List<_Tool> tools = <_Tool>[
       _Tool('Калькулятор', Icons.calculate_outlined, '/tools/calculator'),
       _Tool('Таймер', Icons.timer_outlined, '/tools/timer'),
+      _Tool('QR-код', Icons.qr_code_2_rounded, '/tools/qr'),
+      _Tool('Переводчик', Icons.translate_rounded, '/tools/translator'),
+      _Tool('Разделить счёт', Icons.account_balance_wallet_outlined,
+          '/tools/bill'),
       _Tool('Конвертер валют', Icons.currency_exchange_rounded, null),
-      _Tool('Переводчик', Icons.translate_rounded, null),
-      _Tool('QR-код', Icons.qr_code_2_rounded, null),
       _Tool('Опрос', Icons.poll_outlined, null),
-      _Tool('Разделить счёт', Icons.account_balance_wallet_outlined, null),
       _Tool('Заметка', Icons.sticky_note_2_outlined, null),
     ];
 
