@@ -63,6 +63,42 @@ class ChatSummary {
 }
 
 @immutable
+class PollOption {
+  const PollOption({
+    required this.text,
+    required this.votes,
+    required this.votedByMe,
+  });
+  final String text;
+  final int votes;
+  final bool votedByMe;
+
+  PollOption copyWith({int? votes, bool? votedByMe}) => PollOption(
+        text: text,
+        votes: votes ?? this.votes,
+        votedByMe: votedByMe ?? this.votedByMe,
+      );
+}
+
+@immutable
+class PollData {
+  const PollData({
+    required this.question,
+    required this.options,
+    required this.multi,
+    required this.anonymous,
+  });
+
+  final String question;
+  final List<PollOption> options;
+  final bool multi;
+  final bool anonymous;
+
+  int get totalVotes =>
+      options.fold(0, (int sum, PollOption o) => sum + o.votes);
+}
+
+@immutable
 class ChatMessage {
   const ChatMessage({
     required this.id,
@@ -76,6 +112,7 @@ class ChatMessage {
     this.expiresAt,
     this.voiceWaveform,
     this.voiceDurationMs,
+    this.poll,
   });
 
   final String id;
@@ -94,13 +131,18 @@ class ChatMessage {
   final List<double>? voiceWaveform;
   final int? voiceDurationMs;
 
+  /// Если задано — сообщение является опросом.
+  final PollData? poll;
+
   bool get isVoice => voiceWaveform != null;
+  bool get isPoll => poll != null;
 
   ChatMessage copyWith({
     String? text,
     bool? read,
     List<String>? reactions,
     DateTime? expiresAt,
+    PollData? poll,
   }) {
     return ChatMessage(
       id: id,
@@ -114,6 +156,7 @@ class ChatMessage {
       expiresAt: expiresAt ?? this.expiresAt,
       voiceWaveform: voiceWaveform,
       voiceDurationMs: voiceDurationMs,
+      poll: poll ?? this.poll,
     );
   }
 }

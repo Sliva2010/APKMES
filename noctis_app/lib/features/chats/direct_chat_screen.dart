@@ -13,6 +13,7 @@ import '../calls/call_screen.dart';
 import '../media/voice_recorder.dart';
 import '../stickers/sticker_picker.dart';
 import 'chat_repository.dart';
+import 'poll_creator_sheet.dart';
 
 class DirectChatScreen extends ConsumerStatefulWidget {
   const DirectChatScreen({super.key, required this.chatId});
@@ -171,6 +172,171 @@ class _DirectChatScreenState extends ConsumerState<DirectChatScreen> {
         onComplete: _sendVoice,
       ),
     );
+  }
+
+  void _openAttachments() {
+    HapticsService.tap();
+    final ThemeData theme = Theme.of(context);
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: theme.colorScheme.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (BuildContext sheetCtx) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: <Widget>[
+                Container(
+                  width: 36,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.outlineVariant,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Text('Вложение', style: theme.textTheme.titleLarge),
+                const SizedBox(height: 16),
+                Wrap(
+                  spacing: 12,
+                  runSpacing: 12,
+                  alignment: WrapAlignment.center,
+                  children: <Widget>[
+                    _AttachmentChip(
+                      icon: Icons.image_outlined,
+                      label: 'Фото',
+                      onTap: () {
+                        Navigator.pop(sheetCtx);
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(
+                              'Скоро: галерея',
+                              style: theme.textTheme.bodyMedium,
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                    _AttachmentChip(
+                      icon: Icons.poll_outlined,
+                      label: 'Опрос',
+                      onTap: () {
+                        Navigator.pop(sheetCtx);
+                        _openPollCreator();
+                      },
+                    ),
+                    _AttachmentChip(
+                      icon: Icons.location_on_outlined,
+                      label: 'Локация',
+                      onTap: () {
+                        Navigator.pop(sheetCtx);
+                        _sendSystem('Поделился(ась) геопозицией');
+                      },
+                    ),
+                    _AttachmentChip(
+                      icon: Icons.contact_page_outlined,
+                      label: 'Контакт',
+                      onTap: () {
+                        Navigator.pop(sheetCtx);
+                        _sendSystem('Поделился(ась) контактом');
+                      },
+                    ),
+                    _AttachmentChip(
+                      icon: Icons.description_outlined,
+                      label: 'Файл',
+                      onTap: () {
+                        Navigator.pop(sheetCtx);
+                        _sendSystem('Файл отправлен');
+                      },
+                    ),
+                    _AttachmentChip(
+                      icon: Icons.schedule_rounded,
+                      label: 'Запланировать',
+                      onTap: () {
+                        Navigator.pop(sheetCtx);
+                        _sendSystem(
+                            'Сообщение будет отправлено по расписанию');
+                      },
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  void _openPollCreator() {
+    final ThemeData theme = Theme.of(context);
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: theme.colorScheme.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (BuildContext sheetCtx) => PollCreatorSheet(
+        onCreate: _sendPoll,
+      ),
+    );
+  }
+
+  void _sendSystem(String text) {
+    final Map<String, List<ChatMessage>> map =
+        ref.read(chatMessagesProvider.notifier).state;
+    final List<ChatMessage> list =
+        List<ChatMessage>.from(map[widget.chatId] ?? <ChatMessage>[]);
+    list.add(
+      ChatMessage(
+        id: 'sys-${DateTime.now().microsecondsSinceEpoch}',
+        fromMe: true,
+        text: text,
+        sentAt: DateTime.now(),
+        read: false,
+      ),
+    );
+    ref.read(chatMessagesProvider.notifier).state = <String, List<ChatMessage>>{
+      ...map,
+      widget.chatId: list,
+    };
+    setState(() {});
+  }
+
+  void _sendPoll(PollDraft draft) {
+    final Map<String, List<ChatMessage>> map =
+        ref.read(chatMessagesProvider.notifier).state;
+    final List<ChatMessage> list =
+        List<ChatMessage>.from(map[widget.chatId] ?? <ChatMessage>[]);
+    final DateTime now = DateTime.now();
+    list.add(
+      ChatMessage(
+        id: 'poll-${now.microsecondsSinceEpoch}',
+        fromMe: true,
+        text: draft.question,
+        sentAt: now,
+        read: false,
+        poll: PollData(
+          question: draft.question,
+          options: <PollOption>[
+            for (final String s in draft.options)
+              PollOption(text: s, votes: 0, votedByMe: false),
+          ],
+          multi: draft.multi,
+          anonymous: draft.anonymous,
+        ),
+      ),
+    );
+    ref.read(chatMessagesProvider.notifier).state = <String, List<ChatMessage>>{
+      ...map,
+      widget.chatId: list,
+    };
+    setState(() {});
   }
 
   void _toggleReaction(ChatMessage m, String reactionId) {
@@ -511,6 +677,7 @@ class _DirectChatScreenState extends ConsumerState<DirectChatScreen> {
               focusNode: _focusNode,
               onSend: _send,
               onMicTap: _openVoiceRecorder,
+              onAttach: _openAttachments,
               ttlSeconds: chat.ttlSeconds,
             ),
           ],
@@ -664,6 +831,8 @@ class _MessageBubble extends StatelessWidget {
                     ),
                   if (message.isVoice)
                     _VoicePlayer(message: message, fg: fg)
+                  else if (message.isPoll)
+                    _PollBubbleContent(message: message, fg: fg, bg: bg)
                   else
                     Text(
                       message.text,
@@ -732,6 +901,294 @@ class _MessageBubble extends StatelessWidget {
     if (d.inMinutes < 60) return '${d.inMinutes}м';
     if (d.inHours < 24) return '${d.inHours}ч';
     return '${d.inDays}д';
+  }
+}
+
+class _AttachmentChip extends StatelessWidget {
+  const _AttachmentChip({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final ThemeData theme = Theme.of(context);
+    return GestureDetector(
+      onTap: onTap,
+      child: SizedBox(
+        width: 92,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            Container(
+              width: 64,
+              height: 64,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: theme.colorScheme.surfaceContainerHighest,
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: theme.colorScheme.outlineVariant,
+                  width: 1,
+                ),
+              ),
+              child: Icon(icon,
+                  color: theme.colorScheme.onSurface, size: 24),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              label,
+              textAlign: TextAlign.center,
+              style: theme.textTheme.bodyMedium,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _PollBubbleContent extends ConsumerWidget {
+  const _PollBubbleContent({
+    required this.message,
+    required this.fg,
+    required this.bg,
+  });
+
+  final ChatMessage message;
+  final Color fg;
+  final Color bg;
+
+  void _onVote(BuildContext context, WidgetRef ref, int idx) {
+    HapticsService.selection();
+    final List<ChatMessage>? current = _findChat(ref);
+    if (current == null) return;
+    final ChatMessage m = current.firstWhere(
+      (ChatMessage x) => x.id == message.id,
+      orElse: () => message,
+    );
+    final PollData? old = m.poll;
+    if (old == null) return;
+    final List<PollOption> next = <PollOption>[];
+    for (int i = 0; i < old.options.length; i++) {
+      final PollOption o = old.options[i];
+      if (i == idx) {
+        if (o.votedByMe) {
+          next.add(o.copyWith(votes: o.votes - 1, votedByMe: false));
+        } else {
+          next.add(o.copyWith(votes: o.votes + 1, votedByMe: true));
+        }
+      } else {
+        if (!old.multi && o.votedByMe) {
+          next.add(o.copyWith(votes: o.votes - 1, votedByMe: false));
+        } else {
+          next.add(o);
+        }
+      }
+    }
+    final ChatMessage updated = m.copyWith(
+      poll: PollData(
+        question: old.question,
+        options: next,
+        multi: old.multi,
+        anonymous: old.anonymous,
+      ),
+    );
+    final Map<String, List<ChatMessage>> map = ref.read(chatMessagesProvider);
+    final String chatId = _chatIdFor(ref, m.id) ?? '';
+    if (chatId.isEmpty) return;
+    final List<ChatMessage> updatedList = <ChatMessage>[
+      for (final ChatMessage x in map[chatId] ?? <ChatMessage>[])
+        if (x.id == m.id) updated else x,
+    ];
+    ref.read(chatMessagesProvider.notifier).state = <String, List<ChatMessage>>{
+      ...map,
+      chatId: updatedList,
+    };
+  }
+
+  List<ChatMessage>? _findChat(WidgetRef ref) {
+    final Map<String, List<ChatMessage>> map = ref.read(chatMessagesProvider);
+    for (final List<ChatMessage> list in map.values) {
+      if (list.any((ChatMessage x) => x.id == message.id)) return list;
+    }
+    return null;
+  }
+
+  String? _chatIdFor(WidgetRef ref, String messageId) {
+    final Map<String, List<ChatMessage>> map = ref.read(chatMessagesProvider);
+    for (final MapEntry<String, List<ChatMessage>> e in map.entries) {
+      if (e.value.any((ChatMessage x) => x.id == messageId)) return e.key;
+    }
+    return null;
+  }
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final ThemeData theme = Theme.of(context);
+    final PollData poll = message.poll!;
+    final int total = poll.totalVotes;
+    final bool voted =
+        poll.options.any((PollOption o) => o.votedByMe);
+
+    return SizedBox(
+      width: 260,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
+          Row(
+            children: <Widget>[
+              Icon(Icons.poll_outlined, size: 16, color: fg),
+              const SizedBox(width: 6),
+              Text(
+                poll.anonymous ? 'Анонимный опрос' : 'Опрос',
+                style: theme.textTheme.labelMedium?.copyWith(
+                  color: fg.withOpacity(0.85),
+                  letterSpacing: 1,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          Text(
+            poll.question,
+            style: theme.textTheme.titleMedium?.copyWith(
+              color: fg,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 10),
+          for (int i = 0; i < poll.options.length; i++) ...<Widget>[
+            _PollOptionRow(
+              option: poll.options[i],
+              total: total,
+              fg: fg,
+              bg: bg,
+              voted: voted,
+              onTap: () => _onVote(context, ref, i),
+            ),
+            if (i != poll.options.length - 1) const SizedBox(height: 6),
+          ],
+          const SizedBox(height: 6),
+          Text(
+            total == 0
+                ? 'Никто не проголосовал'
+                : 'Голосов: $total${poll.multi ? " · можно несколько" : ""}',
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: fg.withOpacity(0.7),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _PollOptionRow extends StatelessWidget {
+  const _PollOptionRow({
+    required this.option,
+    required this.total,
+    required this.fg,
+    required this.bg,
+    required this.voted,
+    required this.onTap,
+  });
+
+  final PollOption option;
+  final int total;
+  final Color fg;
+  final Color bg;
+  final bool voted;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final ThemeData theme = Theme.of(context);
+    final double pct = total == 0 ? 0 : option.votes / total;
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: Stack(
+        children: <Widget>[
+          // Заливка прогресса.
+          Positioned.fill(
+            child: AnimatedContainer(
+              duration: NoctisDurations.list,
+              curve: NoctisCurves.standard,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(12),
+                color: fg.withOpacity(0.08),
+              ),
+            ),
+          ),
+          AnimatedFractionallySizedBox(
+            duration: NoctisDurations.list,
+            curve: NoctisCurves.standard,
+            widthFactor: pct,
+            heightFactor: 1,
+            alignment: Alignment.centerLeft,
+            child: Container(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(12),
+                color: option.votedByMe
+                    ? fg.withOpacity(0.30)
+                    : fg.withOpacity(0.16),
+              ),
+            ),
+          ),
+          Padding(
+            padding:
+                const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            child: Row(
+              children: <Widget>[
+                AnimatedContainer(
+                  duration: NoctisDurations.tap,
+                  width: 18,
+                  height: 18,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    color: option.votedByMe ? fg : Colors.transparent,
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: fg,
+                      width: 1.5,
+                    ),
+                  ),
+                  child: option.votedByMe
+                      ? Icon(Icons.check_rounded, size: 12, color: bg)
+                      : null,
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    option.text,
+                    style: theme.textTheme.bodyLarge?.copyWith(
+                      color: fg,
+                      fontWeight:
+                          option.votedByMe ? FontWeight.w600 : FontWeight.w500,
+                    ),
+                  ),
+                ),
+                if (voted || option.votes > 0)
+                  Text(
+                    '${(pct * 100).round()}%',
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: fg,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
 
@@ -960,6 +1417,7 @@ class _Composer extends StatefulWidget {
     required this.focusNode,
     required this.onSend,
     required this.onMicTap,
+    required this.onAttach,
     required this.ttlSeconds,
   });
 
@@ -967,6 +1425,7 @@ class _Composer extends StatefulWidget {
   final FocusNode focusNode;
   final VoidCallback onSend;
   final VoidCallback onMicTap;
+  final VoidCallback onAttach;
   final int? ttlSeconds;
 
   @override
@@ -1009,7 +1468,10 @@ class _ComposerState extends State<_Composer> {
         children: <Widget>[
           IconButton(
             icon: const Icon(Icons.add_rounded),
-            onPressed: () => HapticsService.tap(),
+            onPressed: () {
+              HapticsService.tap();
+              widget.onAttach();
+            },
           ),
           IconButton(
             icon: const Icon(Icons.sentiment_satisfied_rounded),
