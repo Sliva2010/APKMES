@@ -1937,29 +1937,28 @@ class _ComposerState extends State<_Composer> {
                     key: const ValueKey<String>('send'),
                     onTap: widget.onSend,
                   )
-                : Row(
+                : GestureDetector(
                     key: const ValueKey<String>('mic'),
-                    mainAxisSize: MainAxisSize.min,
-                    children: <Widget>[
-                      IconButton(
-                        tooltip: _voiceMode ? 'Голосовое' : 'Кружок',
-                        icon: Icon(_voiceMode
-                            ? Icons.mic_none_rounded
-                            : Icons.videocam_outlined),
-                        onPressed: () {
-                          HapticsService.selection();
-                          if (_voiceMode) {
-                            widget.onMicTap();
-                          } else {
-                            widget.onVideoNote();
-                          }
-                        },
-                        onLongPress: () {
-                          HapticsService.warning();
-                          setState(() => _voiceMode = !_voiceMode);
-                        },
-                      ),
-                    ],
+                    onLongPress: () {
+                      HapticsService.warning();
+                      setState(() => _voiceMode = !_voiceMode);
+                    },
+                    child: IconButton(
+                      tooltip: _voiceMode
+                          ? 'Голосовое (зажмите для кружка)'
+                          : 'Кружок (зажмите для голосового)',
+                      icon: Icon(_voiceMode
+                          ? Icons.mic_none_rounded
+                          : Icons.videocam_outlined),
+                      onPressed: () {
+                        HapticsService.selection();
+                        if (_voiceMode) {
+                          widget.onMicTap();
+                        } else {
+                          widget.onVideoNote();
+                        }
+                      },
+                    ),
                   ),
           ),
         ],
