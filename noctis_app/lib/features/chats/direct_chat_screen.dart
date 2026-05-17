@@ -8,6 +8,7 @@ import 'package:intl/intl.dart';
 
 import '../../core/animation/durations_curves.dart';
 import '../../core/animation/haptics_service.dart';
+import '../../ui/widgets/noctis_glyph.dart';
 import '../calls/call_screen.dart';
 import '../media/voice_recorder.dart';
 import '../stickers/sticker_picker.dart';
@@ -172,7 +173,7 @@ class _DirectChatScreenState extends ConsumerState<DirectChatScreen> {
     );
   }
 
-  void _toggleReaction(ChatMessage m, String emoji) {
+  void _toggleReaction(ChatMessage m, String reactionId) {
     HapticsService.selection();
     final Map<String, List<ChatMessage>> map = ref.read(chatMessagesProvider);
     final List<ChatMessage> list =
@@ -180,10 +181,10 @@ class _DirectChatScreenState extends ConsumerState<DirectChatScreen> {
     final int idx = list.indexWhere((ChatMessage x) => x.id == m.id);
     if (idx < 0) return;
     final List<String> reactions = List<String>.from(list[idx].reactions);
-    if (reactions.contains(emoji)) {
-      reactions.remove(emoji);
+    if (reactions.contains(reactionId)) {
+      reactions.remove(reactionId);
     } else {
-      reactions.add(emoji);
+      reactions.add(reactionId);
     }
     list[idx] = list[idx].copyWith(reactions: reactions);
     ref.read(chatMessagesProvider.notifier).state = <String, List<ChatMessage>>{
@@ -236,21 +237,17 @@ class _DirectChatScreenState extends ConsumerState<DirectChatScreen> {
               const SizedBox(height: 16),
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: Wrap(
-                  spacing: 8,
-                  alignment: WrapAlignment.spaceBetween,
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: <Widget>[
-                    for (final String e in <String>['👍', '❤️', '🔥', '😂', '😮', '😢'])
-                      InkWell(
-                        borderRadius: BorderRadius.circular(50),
+                    for (final NoctisReaction r in NoctisReactions.all)
+                      _ReactionPickerButton(
+                        reaction: r,
+                        active: m.reactions.contains(r.id),
                         onTap: () {
                           Navigator.pop(context);
-                          _toggleReaction(m, e);
+                          _toggleReaction(m, r.id);
                         },
-                        child: Container(
-                          padding: const EdgeInsets.all(10),
-                          child: Text(e, style: const TextStyle(fontSize: 28)),
-                        ),
                       ),
                   ],
                 ),
@@ -376,56 +373,63 @@ class _DirectChatScreenState extends ConsumerState<DirectChatScreen> {
           icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 18),
           onPressed: () => context.pop(),
         ),
-        title: Row(
-          children: <Widget>[
-            Container(
-              width: 36,
-              height: 36,
-              alignment: Alignment.center,
-              decoration: BoxDecoration(
-                color: theme.colorScheme.surfaceContainerHighest,
-                shape: BoxShape.circle,
-                border: Border.all(
-                  color: theme.colorScheme.outlineVariant,
-                  width: 1,
-                ),
-              ),
-              child: Text(
-                chat.initials,
-                style: theme.textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: <Widget>[
-                  Row(
-                    children: <Widget>[
-                      Flexible(
-                        child: Text(
-                          chat.title,
-                          style: theme.textTheme.titleMedium,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                      if (chat.ttlSeconds != null) ...<Widget>[
-                        const SizedBox(width: 6),
-                        Icon(
-                          Icons.timelapse_rounded,
-                          size: 14,
-                          color: theme.colorScheme.onSurfaceVariant,
-                        ),
-                      ],
-                    ],
+        title: GestureDetector(
+          onTap: () {
+            HapticsService.tap();
+            context.push('/chats/${widget.chatId}/profile');
+          },
+          behavior: HitTestBehavior.opaque,
+          child: Row(
+            children: <Widget>[
+              Container(
+                width: 36,
+                height: 36,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.surfaceContainerHighest,
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: theme.colorScheme.outlineVariant,
+                    width: 1,
                   ),
-                  Text('в сети', style: theme.textTheme.bodySmall),
-                ],
+                ),
+                child: Text(
+                  chat.initials,
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
               ),
-            ),
-          ],
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    Row(
+                      children: <Widget>[
+                        Flexible(
+                          child: Text(
+                            chat.title,
+                            style: theme.textTheme.titleMedium,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        if (chat.ttlSeconds != null) ...<Widget>[
+                          const SizedBox(width: 6),
+                          Icon(
+                            Icons.timelapse_rounded,
+                            size: 14,
+                            color: theme.colorScheme.onSurfaceVariant,
+                          ),
+                        ],
+                      ],
+                    ),
+                    Text('в сети', style: theme.textTheme.bodySmall),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ),
         actions: <Widget>[
           IconButton(
@@ -489,7 +493,7 @@ class _DirectChatScreenState extends ConsumerState<DirectChatScreen> {
                       onReply: () => _setReply(msg),
                       child: GestureDetector(
                         onLongPress: () => _showMessageMenu(msg),
-                        onDoubleTap: () => _toggleReaction(msg, '👍'),
+                        onDoubleTap: () => _toggleReaction(msg, 'thumb'),
                         child: _MessageBubble(message: msg),
                       ),
                     ),
@@ -708,23 +712,12 @@ class _MessageBubble extends StatelessWidget {
             if (message.reactions.isNotEmpty)
               Padding(
                 padding: const EdgeInsets.only(top: 4),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 4,
-                  ),
-                  decoration: BoxDecoration(
-                    color: theme.colorScheme.surface,
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(
-                      color: theme.colorScheme.outlineVariant,
-                      width: 1,
-                    ),
-                  ),
-                  child: Text(
-                    message.reactions.join(' '),
-                    style: const TextStyle(fontSize: 14),
-                  ),
+                child: Wrap(
+                  spacing: 4,
+                  children: <Widget>[
+                    for (final String id in message.reactions)
+                      _ReactionChip(reaction: NoctisReactions.byId(id)),
+                  ],
                 ),
               ),
           ],
@@ -739,6 +732,69 @@ class _MessageBubble extends StatelessWidget {
     if (d.inMinutes < 60) return '${d.inMinutes}м';
     if (d.inHours < 24) return '${d.inHours}ч';
     return '${d.inDays}д';
+  }
+}
+
+class _ReactionChip extends StatelessWidget {
+  const _ReactionChip({required this.reaction});
+  final NoctisReaction reaction;
+
+  @override
+  Widget build(BuildContext context) {
+    final ThemeData theme = Theme.of(context);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surface,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: theme.colorScheme.outlineVariant,
+          width: 1,
+        ),
+      ),
+      child: Icon(
+        reaction.filled,
+        size: 14,
+        color: theme.colorScheme.onSurface,
+      ),
+    );
+  }
+}
+
+class _ReactionPickerButton extends StatelessWidget {
+  const _ReactionPickerButton({
+    required this.reaction,
+    required this.active,
+    required this.onTap,
+  });
+
+  final NoctisReaction reaction;
+  final bool active;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final ThemeData theme = Theme.of(context);
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 48,
+        height: 48,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: active
+              ? theme.colorScheme.onSurface
+              : theme.colorScheme.surfaceContainerHighest,
+          shape: BoxShape.circle,
+        ),
+        child: Icon(
+          active ? reaction.filled : reaction.outlined,
+          size: 22,
+          color:
+              active ? theme.colorScheme.surface : theme.colorScheme.onSurface,
+        ),
+      ),
+    );
   }
 }
 

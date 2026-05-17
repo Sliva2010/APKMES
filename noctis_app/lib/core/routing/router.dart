@@ -10,8 +10,10 @@ import '../../features/auth/phone_screen.dart';
 import '../../features/auth/profile_setup_screen.dart';
 import '../../features/auth/welcome_screen.dart';
 import '../../features/chats/chat_list_screen.dart';
+import '../../features/chats/contact_profile_screen.dart';
 import '../../features/chats/direct_chat_screen.dart';
 import '../../features/chats/new_chat_screen.dart';
+import '../../features/discover/discover_screen.dart';
 import '../../features/mini_tools/calculator_tool.dart';
 import '../../features/mini_tools/mini_tools_screen.dart';
 import '../../features/mini_tools/timer_tool.dart';
@@ -98,8 +100,24 @@ final Provider<GoRouterConfig> routerProvider = Provider<GoRouterConfig>((
               final String chatId = state.pathParameters['chatId'] ?? '';
               return _buildPage(state, DirectChatScreen(chatId: chatId));
             },
+            routes: <RouteBase>[
+              GoRoute(
+                path: 'profile',
+                pageBuilder: (BuildContext context, GoRouterState state) {
+                  final String chatId =
+                      state.pathParameters['chatId'] ?? '';
+                  return _buildPage(
+                      state, ContactProfileScreen(chatId: chatId));
+                },
+              ),
+            ],
           ),
         ],
+      ),
+      GoRoute(
+        path: '/discover',
+        pageBuilder: (BuildContext context, GoRouterState state) =>
+            _buildPage(state, const DiscoverScreen()),
       ),
       GoRoute(
         path: '/search',

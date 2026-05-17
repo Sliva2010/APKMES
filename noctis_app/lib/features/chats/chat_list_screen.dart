@@ -33,6 +33,13 @@ class ChatListScreen extends ConsumerWidget {
             },
           ),
           IconButton(
+            icon: const Icon(Icons.explore_outlined),
+            onPressed: () {
+              HapticsService.tap();
+              context.push('/discover');
+            },
+          ),
+          IconButton(
             icon: const Icon(Icons.dashboard_customize_outlined),
             onPressed: () {
               HapticsService.tap();

@@ -191,7 +191,7 @@ final StateProvider<Map<String, List<ChatMessage>>> chatMessagesProvider =
         text: 'Да, отлично. Тот же кафе?',
         sentAt: now.subtract(const Duration(minutes: 35)),
         read: true,
-        reactions: <String>['👍'],
+        reactions: <String>['thumb'],
       ),
       ChatMessage(
         id: 'a4',
