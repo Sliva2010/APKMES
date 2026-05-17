@@ -1,9 +1,30 @@
-// Theme_Engine — две монохромные темы (Pure White, Pure Black)
-// с премиальной типографикой и плавными переходами.
+// Theme_Engine — четыре монохромные темы NOCTIS:
+// Pure White, Pure Black, Graphite (тёмно-серый), Paper (тёплый светлый).
+// Все цвета строго R==G==B.
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'monochrome_palette.dart';
+
+enum NoctisThemePalette { pureWhite, pureBlack, graphite, paper }
+
+extension NoctisThemePaletteX on NoctisThemePalette {
+  String get title {
+    switch (this) {
+      case NoctisThemePalette.pureWhite:
+        return 'Pure White';
+      case NoctisThemePalette.pureBlack:
+        return 'Pure Black';
+      case NoctisThemePalette.graphite:
+        return 'Graphite';
+      case NoctisThemePalette.paper:
+        return 'Paper';
+    }
+  }
+
+  bool get isDark =>
+      this == NoctisThemePalette.pureBlack || this == NoctisThemePalette.graphite;
+}
 
 enum NoctisThemeMode { system, light, dark }
 
@@ -23,38 +44,80 @@ extension NoctisThemeModeMaterial on NoctisThemeMode {
 final StateProvider<NoctisThemeMode> themeModeProvider =
     StateProvider<NoctisThemeMode>((Ref ref) => NoctisThemeMode.system);
 
+/// Активные палитры для светлого и тёмного режимов.
+final StateProvider<NoctisThemePalette> lightPaletteProvider =
+    StateProvider<NoctisThemePalette>((Ref ref) => NoctisThemePalette.pureWhite);
+
+final StateProvider<NoctisThemePalette> darkPaletteProvider =
+    StateProvider<NoctisThemePalette>((Ref ref) => NoctisThemePalette.pureBlack);
+
 class ThemeEngine {
   ThemeEngine._();
 
   static const String _fontFamily = 'NoctisSans';
 
-  static ThemeData buildLight() => _build(
-        brightness: Brightness.light,
-        background: MonochromePalette.white,
-        surface: MonochromePalette.porcelain,
-        surfaceAlt: MonochromePalette.paper,
-        outline: MonochromePalette.pearl,
-        outlineStrong: MonochromePalette.silver,
-        primary: MonochromePalette.black,
-        onPrimary: MonochromePalette.white,
-        text: MonochromePalette.black,
-        textMuted: MonochromePalette.stone,
-        textFaint: MonochromePalette.ash,
-      );
-
-  static ThemeData buildDark() => _build(
-        brightness: Brightness.dark,
-        background: MonochromePalette.black,
-        surface: MonochromePalette.ink,
-        surfaceAlt: MonochromePalette.graphite,
-        outline: MonochromePalette.iron,
-        outlineStrong: MonochromePalette.steel,
-        primary: MonochromePalette.white,
-        onPrimary: MonochromePalette.black,
-        text: MonochromePalette.white,
-        textMuted: MonochromePalette.silver,
-        textFaint: MonochromePalette.smoke,
-      );
+  static ThemeData buildFor(NoctisThemePalette p) {
+    switch (p) {
+      case NoctisThemePalette.pureWhite:
+        return _build(
+          brightness: Brightness.light,
+          background: MonochromePalette.white,
+          surface: MonochromePalette.porcelain,
+          surfaceAlt: MonochromePalette.paper,
+          outline: MonochromePalette.pearl,
+          outlineStrong: MonochromePalette.silver,
+          primary: MonochromePalette.black,
+          onPrimary: MonochromePalette.white,
+          text: MonochromePalette.black,
+          textMuted: MonochromePalette.stone,
+          textFaint: MonochromePalette.ash,
+        );
+      case NoctisThemePalette.paper:
+        // Paper — тёплый светлый: чуть приглушённый фон, мягкие границы.
+        return _build(
+          brightness: Brightness.light,
+          background: MonochromePalette.paper,
+          surface: MonochromePalette.porcelain,
+          surfaceAlt: MonochromePalette.pearl,
+          outline: MonochromePalette.silver,
+          outlineStrong: MonochromePalette.smoke,
+          primary: MonochromePalette.graphite,
+          onPrimary: MonochromePalette.porcelain,
+          text: MonochromePalette.graphite,
+          textMuted: MonochromePalette.stone,
+          textFaint: MonochromePalette.ash,
+        );
+      case NoctisThemePalette.pureBlack:
+        return _build(
+          brightness: Brightness.dark,
+          background: MonochromePalette.black,
+          surface: MonochromePalette.ink,
+          surfaceAlt: MonochromePalette.graphite,
+          outline: MonochromePalette.iron,
+          outlineStrong: MonochromePalette.steel,
+          primary: MonochromePalette.white,
+          onPrimary: MonochromePalette.black,
+          text: MonochromePalette.white,
+          textMuted: MonochromePalette.silver,
+          textFaint: MonochromePalette.smoke,
+        );
+      case NoctisThemePalette.graphite:
+        // Graphite — приглушённый тёмный без чистого чёрного.
+        return _build(
+          brightness: Brightness.dark,
+          background: MonochromePalette.obsidian,
+          surface: MonochromePalette.graphite,
+          surfaceAlt: MonochromePalette.slate,
+          outline: MonochromePalette.iron,
+          outlineStrong: MonochromePalette.steel,
+          primary: MonochromePalette.pearl,
+          onPrimary: MonochromePalette.obsidian,
+          text: MonochromePalette.pearl,
+          textMuted: MonochromePalette.silver,
+          textFaint: MonochromePalette.ash,
+        );
+    }
+  }
 
   static ThemeData _build({
     required Brightness brightness,

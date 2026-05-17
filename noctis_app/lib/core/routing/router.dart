@@ -16,6 +16,10 @@ import '../../features/mini_tools/calculator_tool.dart';
 import '../../features/mini_tools/mini_tools_screen.dart';
 import '../../features/mini_tools/timer_tool.dart';
 import '../../features/search/search_screen.dart';
+import '../../features/settings/appearance_screen.dart';
+import '../../features/settings/privacy_screen.dart';
+import '../../features/settings/security_screen.dart';
+import '../../features/settings/sessions_screen.dart';
 import '../../features/settings/settings_screen.dart';
 import '../animation/durations_curves.dart';
 
@@ -123,6 +127,28 @@ final Provider<GoRouterConfig> routerProvider = Provider<GoRouterConfig>((
         path: '/settings',
         pageBuilder: (BuildContext context, GoRouterState state) =>
             _buildPage(state, const SettingsScreen()),
+        routes: <RouteBase>[
+          GoRoute(
+            path: 'appearance',
+            pageBuilder: (BuildContext context, GoRouterState state) =>
+                _buildPage(state, const AppearanceScreen()),
+          ),
+          GoRoute(
+            path: 'security',
+            pageBuilder: (BuildContext context, GoRouterState state) =>
+                _buildPage(state, const SecurityScreen()),
+          ),
+          GoRoute(
+            path: 'privacy',
+            pageBuilder: (BuildContext context, GoRouterState state) =>
+                _buildPage(state, const PrivacyScreen()),
+          ),
+          GoRoute(
+            path: 'sessions',
+            pageBuilder: (BuildContext context, GoRouterState state) =>
+                _buildPage(state, const SessionsScreen()),
+          ),
+        ],
       ),
     ],
   );

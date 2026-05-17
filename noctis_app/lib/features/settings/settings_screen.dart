@@ -1,10 +1,9 @@
-// Экран настроек: переключение темы и базовые опции.
+// Главный экран настроек.
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/animation/haptics_service.dart';
-import '../../core/theme/theme_engine.dart';
 import '../auth/auth_controller.dart';
 
 class SettingsScreen extends ConsumerWidget {
@@ -13,7 +12,6 @@ class SettingsScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final ThemeData theme = Theme.of(context);
-    final NoctisThemeMode mode = ref.watch(themeModeProvider);
     final AuthState auth = ref.watch(authControllerProvider);
 
     return Scaffold(
@@ -28,55 +26,84 @@ class SettingsScreen extends ConsumerWidget {
         child: ListView(
           padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
           children: <Widget>[
-            _SectionHeader(label: 'Профиль'),
-            _Tile(
-              title: auth.displayName ?? 'Без имени',
-              subtitle: auth.username == null ? '—' : '@${auth.username}',
-              icon: Icons.person_outline_rounded,
+            _ProfileCard(auth: auth),
+            const SizedBox(height: 16),
+            _Card(
+              children: <Widget>[
+                _Tile(
+                  icon: Icons.brightness_6_outlined,
+                  title: 'Внешний вид',
+                  subtitle: 'Темы и палитры',
+                  onTap: () => context.push('/settings/appearance'),
+                ),
+                const Divider(height: 1),
+                _Tile(
+                  icon: Icons.lock_outline_rounded,
+                  title: 'Безопасность',
+                  subtitle: 'App Lock, биометрия, 2FA',
+                  onTap: () => context.push('/settings/security'),
+                ),
+                const Divider(height: 1),
+                _Tile(
+                  icon: Icons.shield_outlined,
+                  title: 'Приватность',
+                  subtitle: 'Кто видит ваши данные',
+                  onTap: () => context.push('/settings/privacy'),
+                ),
+                const Divider(height: 1),
+                _Tile(
+                  icon: Icons.devices_other_rounded,
+                  title: 'Устройства',
+                  subtitle: 'Активные сессии',
+                  onTap: () => context.push('/settings/sessions'),
+                ),
+              ],
             ),
-            const SizedBox(height: 12),
-            _SectionHeader(label: 'Внешний вид'),
-            _ThemeSelector(
-              current: mode,
-              onChange: (NoctisThemeMode m) {
-                HapticsService.tap();
-                ref.read(themeModeProvider.notifier).state = m;
-              },
+            const SizedBox(height: 16),
+            _Card(
+              children: <Widget>[
+                _Tile(
+                  icon: Icons.dashboard_customize_outlined,
+                  title: 'Мини-инструменты',
+                  subtitle: 'Калькулятор, таймер, переводчик',
+                  onTap: () => context.push('/tools'),
+                ),
+                const Divider(height: 1),
+                _Tile(
+                  icon: Icons.info_outline_rounded,
+                  title: 'О NOCTIS',
+                  subtitle: 'Версия 1.0.0',
+                  onTap: () {
+                    HapticsService.tap();
+                    showAboutDialog(
+                      context: context,
+                      applicationName: 'NOCTIS',
+                      applicationVersion: '1.0.0',
+                      applicationLegalese:
+                          'Премиальный кроссплатформенный мессенджер.\nMIT License.',
+                    );
+                  },
+                ),
+              ],
             ),
-            const SizedBox(height: 12),
-            _SectionHeader(label: 'Инструменты'),
-            _Tile(
-              title: 'Мини-инструменты',
-              subtitle: 'Калькулятор, таймер, переводчик',
-              icon: Icons.dashboard_customize_outlined,
-              onTap: () => context.push('/tools'),
-            ),
-            const SizedBox(height: 12),
-            _SectionHeader(label: 'Безопасность'),
-            _Tile(
-              title: 'Двухфакторная аутентификация',
-              subtitle: 'Облачный пароль',
-              icon: Icons.lock_outline_rounded,
-              onTap: () {},
-            ),
-            _Tile(
-              title: 'Активные сессии',
-              subtitle: 'Управление вошедшими устройствами',
-              icon: Icons.devices_other_rounded,
-              onTap: () {},
-            ),
-            const SizedBox(height: 12),
-            _SectionHeader(label: 'Аккаунт'),
-            _Tile(
-              title: 'Выйти',
-              icon: Icons.logout_rounded,
-              destructive: true,
-              onTap: () async {
-                await ref.read(authControllerProvider.notifier).logout();
-                if (context.mounted) {
-                  context.go('/welcome');
-                }
-              },
+            const SizedBox(height: 16),
+            _Card(
+              children: <Widget>[
+                _Tile(
+                  icon: Icons.logout_rounded,
+                  title: 'Выйти',
+                  destructive: true,
+                  onTap: () async {
+                    HapticsService.warning();
+                    await ref
+                        .read(authControllerProvider.notifier)
+                        .logout();
+                    if (context.mounted) {
+                      context.go('/welcome');
+                    }
+                  },
+                ),
+              ],
             ),
             const SizedBox(height: 16),
             Center(
@@ -92,153 +119,139 @@ class SettingsScreen extends ConsumerWidget {
   }
 }
 
-class _SectionHeader extends StatelessWidget {
-  const _SectionHeader({required this.label});
-  final String label;
+class _ProfileCard extends StatelessWidget {
+  const _ProfileCard({required this.auth});
+  final AuthState auth;
+
+  String get _initials {
+    final String name = auth.displayName ?? '';
+    final List<String> parts = name.trim().split(RegExp(r'\s+'));
+    if (parts.isEmpty || parts.first.isEmpty) return 'N';
+    if (parts.length == 1) return parts.first.substring(0, 1).toUpperCase();
+    return (parts[0][0] + parts[1][0]).toUpperCase();
+  }
 
   @override
   Widget build(BuildContext context) {
     final ThemeData theme = Theme.of(context);
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(8, 16, 8, 8),
-      child: Text(
-        label.toUpperCase(),
-        style: theme.textTheme.labelMedium?.copyWith(
-          color: theme.colorScheme.onSurfaceVariant,
-          letterSpacing: 1.2,
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surface,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(
+          color: theme.colorScheme.outlineVariant,
+          width: 1,
         ),
       ),
+      child: Row(
+        children: <Widget>[
+          Container(
+            width: 64,
+            height: 64,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: theme.colorScheme.onSurface,
+              shape: BoxShape.circle,
+            ),
+            child: Text(
+              _initials,
+              style: theme.textTheme.headlineMedium?.copyWith(
+                color: theme.colorScheme.surface,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Text(
+                  auth.displayName ?? 'Без имени',
+                  style: theme.textTheme.titleLarge,
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  auth.username == null
+                      ? auth.phoneE164 ?? '—'
+                      : '@${auth.username}',
+                  style: theme.textTheme.bodyMedium,
+                ),
+              ],
+            ),
+          ),
+          Icon(
+            Icons.edit_outlined,
+            color: theme.colorScheme.onSurfaceVariant,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _Card extends StatelessWidget {
+  const _Card({required this.children});
+  final List<Widget> children;
+
+  @override
+  Widget build(BuildContext context) {
+    final ThemeData theme = Theme.of(context);
+    return Container(
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surface,
+        borderRadius: BorderRadius.circular(20),
+        border:
+            Border.all(color: theme.colorScheme.outlineVariant, width: 1),
+      ),
+      child: Column(children: children),
     );
   }
 }
 
 class _Tile extends StatelessWidget {
   const _Tile({
+    required this.icon,
     required this.title,
     this.subtitle,
-    this.icon,
     this.onTap,
     this.destructive = false,
   });
 
+  final IconData icon;
   final String title;
   final String? subtitle;
-  final IconData? icon;
   final VoidCallback? onTap;
   final bool destructive;
 
   @override
   Widget build(BuildContext context) {
     final ThemeData theme = Theme.of(context);
-    final Color color =
-        destructive ? theme.colorScheme.onSurface : theme.colorScheme.onSurface;
-    return Material(
-      color: theme.colorScheme.surface,
-      borderRadius: BorderRadius.circular(16),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(16),
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-          child: Row(
-            children: <Widget>[
-              if (icon != null) ...<Widget>[
-                Icon(icon, color: color),
-                const SizedBox(width: 12),
-              ],
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: <Widget>[
-                    Text(title, style: theme.textTheme.titleMedium),
-                    if (subtitle != null) ...<Widget>[
-                      const SizedBox(height: 2),
-                      Text(
-                        subtitle!,
-                        style: theme.textTheme.bodyMedium,
-                      ),
-                    ],
-                  ],
-                ),
-              ),
-              if (onTap != null)
-                Icon(
-                  Icons.chevron_right_rounded,
-                  color: theme.colorScheme.onSurfaceVariant,
-                ),
-            ],
-          ),
+    return ListTile(
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      leading: Icon(icon, color: theme.colorScheme.onSurface),
+      title: Text(
+        title,
+        style: theme.textTheme.titleMedium?.copyWith(
+          fontWeight: destructive ? FontWeight.w600 : FontWeight.w500,
         ),
       ),
-    );
-  }
-}
-
-class _ThemeSelector extends StatelessWidget {
-  const _ThemeSelector({required this.current, required this.onChange});
-  final NoctisThemeMode current;
-  final ValueChanged<NoctisThemeMode> onChange;
-
-  @override
-  Widget build(BuildContext context) {
-    final ThemeData theme = Theme.of(context);
-    Widget chip(NoctisThemeMode mode, String label, IconData icon) {
-      final bool selected = current == mode;
-      return Expanded(
-        child: GestureDetector(
-          onTap: () => onChange(mode),
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 220),
-            curve: Curves.easeOutCubic,
-            padding: const EdgeInsets.symmetric(vertical: 14),
-            decoration: BoxDecoration(
-              color: selected
-                  ? theme.colorScheme.onSurface
-                  : theme.colorScheme.surface,
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(
-                color: theme.colorScheme.outlineVariant,
-                width: 1,
-              ),
-            ),
-            alignment: Alignment.center,
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: <Widget>[
-                Icon(
-                  icon,
-                  size: 18,
-                  color: selected
-                      ? theme.colorScheme.surface
-                      : theme.colorScheme.onSurface,
-                ),
-                const SizedBox(width: 8),
-                Text(
-                  label,
-                  style: theme.textTheme.labelLarge?.copyWith(
-                    color: selected
-                        ? theme.colorScheme.surface
-                        : theme.colorScheme.onSurface,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      );
-    }
-
-    return Padding(
-      padding: const EdgeInsets.all(2),
-      child: Row(
-        children: <Widget>[
-          chip(NoctisThemeMode.system, 'Авто', Icons.brightness_auto_rounded),
-          const SizedBox(width: 8),
-          chip(NoctisThemeMode.light, 'Свет', Icons.light_mode_outlined),
-          const SizedBox(width: 8),
-          chip(NoctisThemeMode.dark, 'Ночь', Icons.dark_mode_outlined),
-        ],
-      ),
+      subtitle: subtitle != null
+          ? Text(subtitle!, style: theme.textTheme.bodyMedium)
+          : null,
+      trailing: onTap != null && !destructive
+          ? Icon(
+              Icons.chevron_right_rounded,
+              color: theme.colorScheme.onSurfaceVariant,
+            )
+          : null,
+      onTap: onTap == null
+          ? null
+          : () {
+              HapticsService.tap();
+              onTap!();
+            },
     );
   }
 }
