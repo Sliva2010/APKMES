@@ -20,6 +20,7 @@ import '../../features/hub/hub_shell.dart';
 import '../../features/mini_tools/calculator_tool.dart';
 import '../../features/mini_tools/mini_tools_screen.dart';
 import '../../features/mini_tools/timer_tool.dart';
+import '../../features/premium/premium_screen.dart';
 import '../../features/search/search_screen.dart';
 import '../../features/settings/appearance_screen.dart';
 import '../../features/settings/privacy_screen.dart';
@@ -96,6 +97,12 @@ final Provider<GoRouterConfig> routerProvider =
         path: '/profile-setup',
         pageBuilder: (BuildContext context, GoRouterState state) =>
             _buildPage(state, const ProfileSetupScreen()),
+      ),
+      GoRoute(
+        path: '/premium',
+        parentNavigatorKey: _rootKey,
+        pageBuilder: (BuildContext context, GoRouterState state) =>
+            _buildPage(state, const PremiumScreen()),
       ),
       // Главный хаб с нижней навигацией.
       StatefulShellRoute.indexedStack(

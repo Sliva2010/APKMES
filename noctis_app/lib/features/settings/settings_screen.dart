@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../core/animation/haptics_service.dart';
 import '../auth/auth_controller.dart';
+import '../premium/premium_state.dart';
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
@@ -13,6 +14,7 @@ class SettingsScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final ThemeData theme = Theme.of(context);
     final AuthState auth = ref.watch(authControllerProvider);
+    final PremiumState premium = ref.watch(premiumProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -23,8 +25,14 @@ class SettingsScreen extends ConsumerWidget {
         child: ListView(
           padding: const EdgeInsets.fromLTRB(16, 12, 16, 96),
           children: <Widget>[
-            _ProfileCard(auth: auth),
+            _ProfileCard(auth: auth, premium: premium),
             const SizedBox(height: 16),
+            if (!premium.active) ...<Widget>[
+              _PremiumPromoCard(
+                onTap: () => context.push('/premium'),
+              ),
+              const SizedBox(height: 16),
+            ],
             _Card(
               children: <Widget>[
                 _Tile(
@@ -60,10 +68,14 @@ class SettingsScreen extends ConsumerWidget {
             _Card(
               children: <Widget>[
                 _Tile(
-                  icon: Icons.dashboard_customize_outlined,
-                  title: 'Мини-инструменты',
-                  subtitle: 'Калькулятор, таймер, переводчик',
-                  onTap: () => context.push('/tools'),
+                  icon: Icons.workspace_premium_rounded,
+                  title: 'NOCTIS Premium',
+                  subtitle: premium.active
+                      ? premium.plan == PremiumPlan.annual
+                          ? 'Годовой · активен'
+                          : 'Месячный · активен'
+                      : 'Безлимит и эксклюзивные фичи',
+                  onTap: () => context.push('/premium'),
                 ),
                 const Divider(height: 1),
                 _Tile(
@@ -117,8 +129,9 @@ class SettingsScreen extends ConsumerWidget {
 }
 
 class _ProfileCard extends StatelessWidget {
-  const _ProfileCard({required this.auth});
+  const _ProfileCard({required this.auth, required this.premium});
   final AuthState auth;
+  final PremiumState premium;
 
   String get _initials {
     final String name = auth.displayName ?? '';
@@ -164,9 +177,24 @@ class _ProfileCard extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
-                Text(
-                  auth.displayName ?? 'Без имени',
-                  style: theme.textTheme.titleLarge,
+                Row(
+                  children: <Widget>[
+                    Flexible(
+                      child: Text(
+                        auth.displayName ?? 'Без имени',
+                        style: theme.textTheme.titleLarge,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    if (premium.active) ...<Widget>[
+                      const SizedBox(width: 6),
+                      Icon(
+                        Icons.workspace_premium_rounded,
+                        size: 20,
+                        color: theme.colorScheme.onSurface,
+                      ),
+                    ],
+                  ],
                 ),
                 const SizedBox(height: 2),
                 Text(
@@ -183,6 +211,73 @@ class _ProfileCard extends StatelessWidget {
             color: theme.colorScheme.onSurfaceVariant,
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _PremiumPromoCard extends StatelessWidget {
+  const _PremiumPromoCard({required this.onTap});
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final ThemeData theme = Theme.of(context);
+    return GestureDetector(
+      onTap: () {
+        HapticsService.tap();
+        onTap();
+      },
+      child: Container(
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: theme.colorScheme.onSurface,
+          borderRadius: BorderRadius.circular(24),
+        ),
+        child: Row(
+          children: <Widget>[
+            Container(
+              width: 56,
+              height: 56,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: theme.colorScheme.surface,
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                Icons.workspace_premium_rounded,
+                color: theme.colorScheme.onSurface,
+                size: 28,
+              ),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  Text(
+                    'Откройте Premium',
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      color: theme.colorScheme.surface,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    'Безлимиты, темы и расширенные инструменты',
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: theme.colorScheme.surface.withOpacity(0.85),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Icon(
+              Icons.chevron_right_rounded,
+              color: theme.colorScheme.surface,
+            ),
+          ],
+        ),
       ),
     );
   }
