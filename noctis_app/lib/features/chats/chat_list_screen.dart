@@ -6,6 +6,7 @@ import 'package:intl/intl.dart';
 
 import '../../core/animation/durations_curves.dart';
 import '../../core/animation/haptics_service.dart';
+import '../stories/stories_strip.dart';
 import 'chat_repository.dart';
 
 class ChatListScreen extends ConsumerWidget {
@@ -48,24 +49,47 @@ class ChatListScreen extends ConsumerWidget {
         ],
       ),
       body: SafeArea(
-        child: ListView.separated(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-          itemCount: chats.length,
-          separatorBuilder: (BuildContext _, int __) =>
-              const SizedBox(height: 2),
-          itemBuilder: (BuildContext context, int index) {
-            final ChatSummary chat = chats[index];
-            return _ChatTile(
-              chat: chat,
-              onTap: () {
-                HapticsService.tap();
-                context.push('/chats/${chat.id}');
-              },
-              onArchive: () => _toggleArchive(ref, chat),
-              onMute: () => _toggleMute(ref, chat),
-              onPin: () => _togglePin(ref, chat),
-            );
-          },
+        child: CustomScrollView(
+          slivers: <Widget>[
+            const SliverToBoxAdapter(child: StoriesStrip()),
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(20, 4, 20, 8),
+                child: Row(
+                  children: <Widget>[
+                    Text(
+                      'Чаты',
+                      style: theme.textTheme.headlineMedium?.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            SliverPadding(
+              padding: const EdgeInsets.symmetric(horizontal: 8),
+              sliver: SliverList.separated(
+                itemCount: chats.length,
+                separatorBuilder: (BuildContext _, int __) =>
+                    const SizedBox(height: 2),
+                itemBuilder: (BuildContext context, int index) {
+                  final ChatSummary chat = chats[index];
+                  return _ChatTile(
+                    chat: chat,
+                    onTap: () {
+                      HapticsService.tap();
+                      context.push('/chats/${chat.id}');
+                    },
+                    onArchive: () => _toggleArchive(ref, chat),
+                    onMute: () => _toggleMute(ref, chat),
+                    onPin: () => _togglePin(ref, chat),
+                  );
+                },
+              ),
+            ),
+            const SliverToBoxAdapter(child: SizedBox(height: 80)),
+          ],
         ),
       ),
       floatingActionButton: FloatingActionButton(

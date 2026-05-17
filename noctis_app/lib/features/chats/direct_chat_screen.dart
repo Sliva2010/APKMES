@@ -8,6 +8,7 @@ import 'package:intl/intl.dart';
 
 import '../../core/animation/durations_curves.dart';
 import '../../core/animation/haptics_service.dart';
+import '../stickers/sticker_picker.dart';
 import 'chat_repository.dart';
 
 class DirectChatScreen extends ConsumerStatefulWidget {
@@ -758,6 +759,30 @@ class _ComposerState extends State<_Composer> {
           IconButton(
             icon: const Icon(Icons.add_rounded),
             onPressed: () => HapticsService.tap(),
+          ),
+          IconButton(
+            icon: const Icon(Icons.sentiment_satisfied_rounded),
+            onPressed: () {
+              HapticsService.tap();
+              showModalBottomSheet<void>(
+                context: context,
+                backgroundColor: theme.colorScheme.surface,
+                shape: const RoundedRectangleBorder(
+                  borderRadius:
+                      BorderRadius.vertical(top: Radius.circular(24)),
+                ),
+                builder: (BuildContext sheetCtx) => StickerPicker(
+                  onPick: (String s) {
+                    Navigator.pop(sheetCtx);
+                    final TextEditingController c = widget.controller;
+                    c.text = c.text + (c.text.isEmpty ? '' : ' ') + s;
+                    c.selection = TextSelection.fromPosition(
+                      TextPosition(offset: c.text.length),
+                    );
+                  },
+                ),
+              );
+            },
           ),
           Expanded(
             child: TextField(
