@@ -1,35 +1,36 @@
 // Роутер NOCTIS на go_router.
-// Ветвь /onboarding|welcome|phone|otp|profile-setup для авторизации,
-// StatefulShellRoute для главного хаба с 4 вкладками.
+// Auth-ветви: /onboarding -> /welcome -> /register -> /chats.
+// Главный хаб с двумя вкладками (Чаты, Настройки).
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../features/archive/archived_chats_screen.dart';
 import '../../features/auth/auth_controller.dart';
 import '../../features/auth/onboarding_screen.dart';
-import '../../features/auth/otp_screen.dart';
-import '../../features/auth/phone_screen.dart';
-import '../../features/auth/profile_setup_screen.dart';
+import '../../features/auth/register_screen.dart';
 import '../../features/auth/welcome_screen.dart';
 import '../../features/chats/chat_list_screen.dart';
+import '../../features/chats/channel_create_screen.dart';
 import '../../features/chats/contact_profile_screen.dart';
 import '../../features/chats/direct_chat_screen.dart';
+import '../../features/chats/group_create_screen.dart';
 import '../../features/chats/new_chat_screen.dart';
-import '../../features/discover/discover_screen.dart';
 import '../../features/hub/hub_shell.dart';
-import '../../features/mini_tools/bill_split_tool.dart';
-import '../../features/mini_tools/calculator_tool.dart';
-import '../../features/mini_tools/mini_tools_screen.dart';
-import '../../features/mini_tools/qr_tool.dart';
-import '../../features/mini_tools/timer_tool.dart';
-import '../../features/mini_tools/translator_tool.dart';
 import '../../features/premium/premium_screen.dart';
 import '../../features/search/search_screen.dart';
 import '../../features/settings/appearance_screen.dart';
+import '../../features/settings/chats_settings_screen.dart';
+import '../../features/settings/edit_profile_screen.dart';
+import '../../features/settings/language_screen.dart';
+import '../../features/settings/notifications_screen.dart';
+import '../../features/settings/premium_badge_screen.dart';
 import '../../features/settings/privacy_screen.dart';
 import '../../features/settings/security_screen.dart';
 import '../../features/settings/sessions_screen.dart';
 import '../../features/settings/settings_screen.dart';
+import '../../features/settings/storage_screen.dart';
+import '../../features/stories/story_compose_screen.dart';
 import '../animation/durations_curves.dart';
 
 class GoRouterConfig {
@@ -60,9 +61,7 @@ final Provider<GoRouterConfig> routerProvider =
       final String loc = state.matchedLocation;
       final bool atAuthRoute = loc.startsWith('/welcome') ||
           loc.startsWith('/onboarding') ||
-          loc.startsWith('/phone') ||
-          loc.startsWith('/otp') ||
-          loc.startsWith('/profile-setup');
+          loc.startsWith('/register');
 
       if (authed && atAuthRoute) {
         return '/chats';
@@ -84,28 +83,21 @@ final Provider<GoRouterConfig> routerProvider =
             _buildPage(state, const WelcomeScreen()),
       ),
       GoRoute(
-        path: '/phone',
+        path: '/register',
         pageBuilder: (BuildContext context, GoRouterState state) =>
-            _buildPage(state, const PhoneInputScreen()),
-      ),
-      GoRoute(
-        path: '/otp',
-        pageBuilder: (BuildContext context, GoRouterState state) {
-          final String phone =
-              (state.extra as Map<String, dynamic>?)?['phone'] as String? ?? '';
-          return _buildPage(state, OtpInputScreen(phone: phone));
-        },
-      ),
-      GoRoute(
-        path: '/profile-setup',
-        pageBuilder: (BuildContext context, GoRouterState state) =>
-            _buildPage(state, const ProfileSetupScreen()),
+            _buildPage(state, const RegisterScreen()),
       ),
       GoRoute(
         path: '/premium',
         parentNavigatorKey: _rootKey,
         pageBuilder: (BuildContext context, GoRouterState state) =>
             _buildPage(state, const PremiumScreen()),
+      ),
+      GoRoute(
+        path: '/story/compose',
+        parentNavigatorKey: _rootKey,
+        pageBuilder: (BuildContext context, GoRouterState state) =>
+            _buildPage(state, const StoryComposeScreen()),
       ),
       // Главный хаб с нижней навигацией.
       StatefulShellRoute.indexedStack(
@@ -130,6 +122,27 @@ final Provider<GoRouterConfig> routerProvider =
                     pageBuilder:
                         (BuildContext context, GoRouterState state) =>
                             _buildPage(state, const NewChatScreen()),
+                  ),
+                  GoRoute(
+                    path: 'group',
+                    parentNavigatorKey: _rootKey,
+                    pageBuilder:
+                        (BuildContext context, GoRouterState state) =>
+                            _buildPage(state, const GroupCreateScreen()),
+                  ),
+                  GoRoute(
+                    path: 'channel',
+                    parentNavigatorKey: _rootKey,
+                    pageBuilder:
+                        (BuildContext context, GoRouterState state) =>
+                            _buildPage(state, const ChannelCreateScreen()),
+                  ),
+                  GoRoute(
+                    path: 'archived',
+                    parentNavigatorKey: _rootKey,
+                    pageBuilder:
+                        (BuildContext context, GoRouterState state) =>
+                            _buildPage(state, const ArchivedChatsScreen()),
                   ),
                   GoRoute(
                     path: ':chatId',
@@ -165,64 +178,7 @@ final Provider<GoRouterConfig> routerProvider =
               ),
             ],
           ),
-          // Вкладка 2: Discover.
-          StatefulShellBranch(
-            routes: <RouteBase>[
-              GoRoute(
-                path: '/discover',
-                pageBuilder: (BuildContext context, GoRouterState state) =>
-                    _buildPage(state, const DiscoverScreen()),
-              ),
-            ],
-          ),
-          // Вкладка 3: инструменты.
-          StatefulShellBranch(
-            routes: <RouteBase>[
-              GoRoute(
-                path: '/tools',
-                pageBuilder: (BuildContext context, GoRouterState state) =>
-                    _buildPage(state, const MiniToolsScreen()),
-                routes: <RouteBase>[
-                  GoRoute(
-                    path: 'calculator',
-                    parentNavigatorKey: _rootKey,
-                    pageBuilder:
-                        (BuildContext context, GoRouterState state) =>
-                            _buildPage(state, const CalculatorTool()),
-                  ),
-                  GoRoute(
-                    path: 'timer',
-                    parentNavigatorKey: _rootKey,
-                    pageBuilder:
-                        (BuildContext context, GoRouterState state) =>
-                            _buildPage(state, const TimerTool()),
-                  ),
-                  GoRoute(
-                    path: 'qr',
-                    parentNavigatorKey: _rootKey,
-                    pageBuilder:
-                        (BuildContext context, GoRouterState state) =>
-                            _buildPage(state, const QrTool()),
-                  ),
-                  GoRoute(
-                    path: 'translator',
-                    parentNavigatorKey: _rootKey,
-                    pageBuilder:
-                        (BuildContext context, GoRouterState state) =>
-                            _buildPage(state, const TranslatorTool()),
-                  ),
-                  GoRoute(
-                    path: 'bill',
-                    parentNavigatorKey: _rootKey,
-                    pageBuilder:
-                        (BuildContext context, GoRouterState state) =>
-                            _buildPage(state, const BillSplitTool()),
-                  ),
-                ],
-              ),
-            ],
-          ),
-          // Вкладка 4: настройки.
+          // Вкладка 2: настройки.
           StatefulShellBranch(
             routes: <RouteBase>[
               GoRoute(
@@ -231,11 +187,46 @@ final Provider<GoRouterConfig> routerProvider =
                     _buildPage(state, const SettingsScreen()),
                 routes: <RouteBase>[
                   GoRoute(
+                    path: 'profile',
+                    parentNavigatorKey: _rootKey,
+                    pageBuilder:
+                        (BuildContext context, GoRouterState state) =>
+                            _buildPage(state, const EditProfileScreen()),
+                  ),
+                  GoRoute(
                     path: 'appearance',
                     parentNavigatorKey: _rootKey,
                     pageBuilder:
                         (BuildContext context, GoRouterState state) =>
                             _buildPage(state, const AppearanceScreen()),
+                  ),
+                  GoRoute(
+                    path: 'notifications',
+                    parentNavigatorKey: _rootKey,
+                    pageBuilder:
+                        (BuildContext context, GoRouterState state) =>
+                            _buildPage(state, const NotificationsScreen()),
+                  ),
+                  GoRoute(
+                    path: 'chats',
+                    parentNavigatorKey: _rootKey,
+                    pageBuilder:
+                        (BuildContext context, GoRouterState state) =>
+                            _buildPage(state, const ChatsSettingsScreen()),
+                  ),
+                  GoRoute(
+                    path: 'language',
+                    parentNavigatorKey: _rootKey,
+                    pageBuilder:
+                        (BuildContext context, GoRouterState state) =>
+                            _buildPage(state, const LanguageScreen()),
+                  ),
+                  GoRoute(
+                    path: 'storage',
+                    parentNavigatorKey: _rootKey,
+                    pageBuilder:
+                        (BuildContext context, GoRouterState state) =>
+                            _buildPage(state, const StorageScreen()),
                   ),
                   GoRoute(
                     path: 'security',
@@ -257,6 +248,13 @@ final Provider<GoRouterConfig> routerProvider =
                     pageBuilder:
                         (BuildContext context, GoRouterState state) =>
                             _buildPage(state, const SessionsScreen()),
+                  ),
+                  GoRoute(
+                    path: 'badge',
+                    parentNavigatorKey: _rootKey,
+                    pageBuilder:
+                        (BuildContext context, GoRouterState state) =>
+                            _buildPage(state, const PremiumBadgeScreen()),
                   ),
                 ],
               ),

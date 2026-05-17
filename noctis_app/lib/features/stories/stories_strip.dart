@@ -1,6 +1,7 @@
 // Лента сторис в монохромном стиле — ленточка над списком чатов.
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../core/animation/durations_curves.dart';
 import '../../core/animation/haptics_service.dart';
@@ -29,14 +30,7 @@ class StoriesStrip extends ConsumerWidget {
             onTap: () {
               HapticsService.tap();
               if (a.isMine && a.stories.isEmpty) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(
-                      'Скоро: добавление своей истории',
-                      style: Theme.of(context).textTheme.bodyMedium,
-                    ),
-                  ),
-                );
+                context.push('/story/compose');
                 return;
               }
               Navigator.of(context).push(
