@@ -1,5 +1,4 @@
-// Главный экран — список чатов.
-// Локально хранит демо-чаты и навигирует в Direct_Chat.
+// Главный экран — список чатов с swipe-действиями (архив, mute, pin).
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -14,7 +13,11 @@ class ChatListScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final List<ChatSummary> chats = ref.watch(chatListProvider);
+    final List<ChatSummary> all = ref.watch(chatListProvider);
+    final List<ChatSummary> chats = <ChatSummary>[
+      ...all.where((ChatSummary c) => !c.archived && c.pinned),
+      ...all.where((ChatSummary c) => !c.archived && !c.pinned),
+    ];
     final ThemeData theme = Theme.of(context);
 
     return Scaffold(
@@ -58,6 +61,9 @@ class ChatListScreen extends ConsumerWidget {
                 HapticsService.tap();
                 context.push('/chats/${chat.id}');
               },
+              onArchive: () => _toggleArchive(ref, chat),
+              onMute: () => _toggleMute(ref, chat),
+              onPin: () => _togglePin(ref, chat),
             );
           },
         ),
@@ -74,13 +80,46 @@ class ChatListScreen extends ConsumerWidget {
       ),
     );
   }
+
+  void _toggleArchive(WidgetRef ref, ChatSummary c) {
+    HapticsService.warning();
+    ref.read(chatListProvider.notifier).state = <ChatSummary>[
+      for (final ChatSummary x in ref.read(chatListProvider))
+        if (x.id == c.id) x.copyWith(archived: !x.archived) else x,
+    ];
+  }
+
+  void _toggleMute(WidgetRef ref, ChatSummary c) {
+    HapticsService.selection();
+    ref.read(chatListProvider.notifier).state = <ChatSummary>[
+      for (final ChatSummary x in ref.read(chatListProvider))
+        if (x.id == c.id) x.copyWith(muted: !x.muted) else x,
+    ];
+  }
+
+  void _togglePin(WidgetRef ref, ChatSummary c) {
+    HapticsService.selection();
+    ref.read(chatListProvider.notifier).state = <ChatSummary>[
+      for (final ChatSummary x in ref.read(chatListProvider))
+        if (x.id == c.id) x.copyWith(pinned: !x.pinned) else x,
+    ];
+  }
 }
 
 class _ChatTile extends StatefulWidget {
-  const _ChatTile({required this.chat, required this.onTap});
+  const _ChatTile({
+    required this.chat,
+    required this.onTap,
+    required this.onArchive,
+    required this.onMute,
+    required this.onPin,
+  });
 
   final ChatSummary chat;
   final VoidCallback onTap;
+  final VoidCallback onArchive;
+  final VoidCallback onMute;
+  final VoidCallback onPin;
 
   @override
   State<_ChatTile> createState() => _ChatTileState();
@@ -92,86 +131,160 @@ class _ChatTileState extends State<_ChatTile> {
   @override
   Widget build(BuildContext context) {
     final ThemeData theme = Theme.of(context);
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTapDown: (_) => setState(() => _down = true),
-      onTapCancel: () => setState(() => _down = false),
-      onTapUp: (_) => setState(() => _down = false),
-      onTap: widget.onTap,
-      child: AnimatedContainer(
-        duration: NoctisDurations.tap,
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-        decoration: BoxDecoration(
-          color: _down
-              ? theme.colorScheme.surface
-              : theme.scaffoldBackgroundColor,
-          borderRadius: BorderRadius.circular(16),
-        ),
-        child: Row(
-          children: <Widget>[
-            _Avatar(initials: widget.chat.initials),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: <Widget>[
-                  Row(
-                    children: <Widget>[
-                      Expanded(
-                        child: Text(
-                          widget.chat.title,
-                          style: theme.textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.w600,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                      Text(
-                        DateFormat.Hm().format(widget.chat.lastMessageAt),
-                        style: theme.textTheme.bodySmall,
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 4),
-                  Row(
-                    children: <Widget>[
-                      Expanded(
-                        child: Text(
-                          widget.chat.lastMessage,
-                          style: theme.textTheme.bodyMedium,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                      if (widget.chat.unread > 0) ...<Widget>[
-                        const SizedBox(width: 8),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 2,
-                          ),
-                          decoration: BoxDecoration(
-                            color: theme.colorScheme.primary,
-                            borderRadius: BorderRadius.circular(20),
-                          ),
-                          child: Text(
-                            '${widget.chat.unread}',
-                            style: theme.textTheme.labelMedium?.copyWith(
-                              color: theme.colorScheme.onPrimary,
-                              fontWeight: FontWeight.w700,
+    return Dismissible(
+      key: ValueKey<String>(widget.chat.id),
+      background: _SwipeBg(
+        alignment: Alignment.centerLeft,
+        icon: widget.chat.pinned ? Icons.push_pin_outlined : Icons.push_pin_rounded,
+      ),
+      secondaryBackground: _SwipeBg(
+        alignment: Alignment.centerRight,
+        icon: widget.chat.archived ? Icons.unarchive_rounded : Icons.archive_outlined,
+      ),
+      confirmDismiss: (DismissDirection direction) async {
+        if (direction == DismissDirection.startToEnd) {
+          widget.onPin();
+        } else {
+          widget.onArchive();
+        }
+        return false;
+      },
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTapDown: (_) => setState(() => _down = true),
+        onTapCancel: () => setState(() => _down = false),
+        onTapUp: (_) => setState(() => _down = false),
+        onLongPress: () {
+          HapticsService.warning();
+          widget.onMute();
+        },
+        onTap: widget.onTap,
+        child: AnimatedContainer(
+          duration: NoctisDurations.tap,
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+          decoration: BoxDecoration(
+            color: _down
+                ? theme.colorScheme.surface
+                : theme.scaffoldBackgroundColor,
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Row(
+            children: <Widget>[
+              _Avatar(initials: widget.chat.initials),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    Row(
+                      children: <Widget>[
+                        if (widget.chat.pinned)
+                          Padding(
+                            padding: const EdgeInsets.only(right: 6),
+                            child: Icon(
+                              Icons.push_pin_rounded,
+                              size: 14,
+                              color: theme.colorScheme.onSurfaceVariant,
                             ),
                           ),
+                        Expanded(
+                          child: Text(
+                            widget.chat.title,
+                            style: theme.textTheme.titleMedium?.copyWith(
+                              fontWeight: FontWeight.w600,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        if (widget.chat.muted)
+                          Padding(
+                            padding: const EdgeInsets.only(right: 6),
+                            child: Icon(
+                              Icons.notifications_off_outlined,
+                              size: 16,
+                              color: theme.colorScheme.onSurfaceVariant,
+                            ),
+                          ),
+                        if (widget.chat.ttlSeconds != null)
+                          Padding(
+                            padding: const EdgeInsets.only(right: 6),
+                            child: Icon(
+                              Icons.timelapse_rounded,
+                              size: 14,
+                              color: theme.colorScheme.onSurfaceVariant,
+                            ),
+                          ),
+                        Text(
+                          DateFormat.Hm().format(widget.chat.lastMessageAt),
+                          style: theme.textTheme.bodySmall,
                         ),
                       ],
-                    ],
-                  ),
-                ],
+                    ),
+                    const SizedBox(height: 4),
+                    Row(
+                      children: <Widget>[
+                        Expanded(
+                          child: Text(
+                            widget.chat.lastMessage,
+                            style: theme.textTheme.bodyMedium,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        if (widget.chat.unread > 0) ...<Widget>[
+                          const SizedBox(width: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 2,
+                            ),
+                            decoration: BoxDecoration(
+                              color: widget.chat.muted
+                                  ? theme.colorScheme.surfaceContainerHighest
+                                  : theme.colorScheme.primary,
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: Text(
+                              '${widget.chat.unread}',
+                              style: theme.textTheme.labelMedium?.copyWith(
+                                color: widget.chat.muted
+                                    ? theme.colorScheme.onSurfaceVariant
+                                    : theme.colorScheme.onPrimary,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ],
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
+    );
+  }
+}
+
+class _SwipeBg extends StatelessWidget {
+  const _SwipeBg({required this.alignment, required this.icon});
+  final Alignment alignment;
+  final IconData icon;
+
+  @override
+  Widget build(BuildContext context) {
+    final ThemeData theme = Theme.of(context);
+    return Container(
+      alignment: alignment,
+      padding: const EdgeInsets.symmetric(horizontal: 24),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Icon(icon, color: theme.colorScheme.onSurface),
     );
   }
 }

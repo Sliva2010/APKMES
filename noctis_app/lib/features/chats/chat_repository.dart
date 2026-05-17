@@ -1,5 +1,5 @@
-// Локальный репозиторий чатов.
-// На текущем этапе — in-memory демо-данные для UX-демонстрации.
+// Локальный репозиторий чатов и сообщений (демо-режим).
+// Поддерживает реакции, ответы и исчезающие сообщения.
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -11,6 +11,10 @@ class ChatSummary {
     required this.lastMessage,
     required this.lastMessageAt,
     required this.unread,
+    this.archived = false,
+    this.pinned = false,
+    this.muted = false,
+    this.ttlSeconds,
   });
 
   final String id;
@@ -18,6 +22,36 @@ class ChatSummary {
   final String lastMessage;
   final DateTime lastMessageAt;
   final int unread;
+  final bool archived;
+  final bool pinned;
+  final bool muted;
+
+  /// TTL для исчезающих сообщений (секунды). null — выключено.
+  final int? ttlSeconds;
+
+  ChatSummary copyWith({
+    String? title,
+    String? lastMessage,
+    DateTime? lastMessageAt,
+    int? unread,
+    bool? archived,
+    bool? pinned,
+    bool? muted,
+    int? ttlSeconds,
+    bool clearTtl = false,
+  }) {
+    return ChatSummary(
+      id: id,
+      title: title ?? this.title,
+      lastMessage: lastMessage ?? this.lastMessage,
+      lastMessageAt: lastMessageAt ?? this.lastMessageAt,
+      unread: unread ?? this.unread,
+      archived: archived ?? this.archived,
+      pinned: pinned ?? this.pinned,
+      muted: muted ?? this.muted,
+      ttlSeconds: clearTtl ? null : (ttlSeconds ?? this.ttlSeconds),
+    );
+  }
 
   String get initials {
     final List<String> parts =
@@ -36,6 +70,10 @@ class ChatMessage {
     required this.text,
     required this.sentAt,
     required this.read,
+    this.replyToId,
+    this.replyToText,
+    this.reactions = const <String>[],
+    this.expiresAt,
   });
 
   final String id;
@@ -43,6 +81,31 @@ class ChatMessage {
   final String text;
   final DateTime sentAt;
   final bool read;
+  final String? replyToId;
+  final String? replyToText;
+  final List<String> reactions;
+
+  /// Точное время удаления; null — без TTL.
+  final DateTime? expiresAt;
+
+  ChatMessage copyWith({
+    String? text,
+    bool? read,
+    List<String>? reactions,
+    DateTime? expiresAt,
+  }) {
+    return ChatMessage(
+      id: id,
+      fromMe: fromMe,
+      text: text ?? this.text,
+      sentAt: sentAt,
+      read: read ?? this.read,
+      replyToId: replyToId,
+      replyToText: replyToText,
+      reactions: reactions ?? this.reactions,
+      expiresAt: expiresAt ?? this.expiresAt,
+    );
+  }
 }
 
 final StateProvider<List<ChatSummary>> chatListProvider =
@@ -55,6 +118,7 @@ final StateProvider<List<ChatSummary>> chatListProvider =
       lastMessage: 'Заметка: купить кофе и проверить почту',
       lastMessageAt: now.subtract(const Duration(minutes: 8)),
       unread: 0,
+      pinned: true,
     ),
     ChatSummary(
       id: 'demo-anna',
@@ -76,6 +140,7 @@ final StateProvider<List<ChatSummary>> chatListProvider =
       lastMessage: 'Подкинул варианты в Figma',
       lastMessageAt: now.subtract(const Duration(hours: 5)),
       unread: 0,
+      muted: true,
     ),
   ];
 });
@@ -107,6 +172,8 @@ final StateProvider<Map<String, List<ChatMessage>>> chatMessagesProvider =
         text: 'Конечно. Семь подойдёт?',
         sentAt: now.subtract(const Duration(minutes: 50)),
         read: true,
+        replyToId: 'a1',
+        replyToText: 'Привет. Поужинаем сегодня?',
       ),
       ChatMessage(
         id: 'a3',
@@ -114,6 +181,7 @@ final StateProvider<Map<String, List<ChatMessage>>> chatMessagesProvider =
         text: 'Да, отлично. Тот же кафе?',
         sentAt: now.subtract(const Duration(minutes: 35)),
         read: true,
+        reactions: <String>['👍'],
       ),
       ChatMessage(
         id: 'a4',
