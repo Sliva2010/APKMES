@@ -1,5 +1,6 @@
-// Премиальный экран голосового звонка NOCTIS.
-// Демо: имитация состояний (вызов → разговор → завершение).
+// Премиальный экран голосового/видео-звонка NOCTIS.
+// Демо: имитация состояний (вызов → разговор → завершение) +
+// звуковые гудки (SoundService) + локальное уведомление о вызове.
 import 'dart:async';
 import 'dart:math';
 
@@ -7,6 +8,9 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/animation/haptics_service.dart';
+import '../../core/audio/sound_service.dart';
+import '../../core/notifications/notification_service.dart';
+import '../../core/permissions/permission_service.dart';
 import '../../core/theme/monochrome_palette.dart';
 
 enum CallState { dialing, active, ended }
@@ -45,8 +49,29 @@ class _CallScreenState extends State<CallScreen>
       duration: const Duration(milliseconds: 1400),
     )..repeat(reverse: true);
     HapticsService.tap();
+    _bootstrap();
+  }
+
+  Future<void> _bootstrap() async {
+    // Запросим разрешения на микрофон/камеру для UX.
+    await PermissionService.ensureMicrophone();
+    if (widget.video) {
+      await PermissionService.ensureCamera();
+    }
+
+    // Гудки исходящего вызова.
+    SoundService.startDialTone();
+
+    // Notification на время вызова.
+    NotificationService.showCall(
+      contactName: widget.contactName,
+      video: widget.video,
+    );
+
+    // Имитация: через 1.8 сек собеседник «поднимает трубку».
     Future<void>.delayed(const Duration(milliseconds: 1800), () {
       if (!mounted) return;
+      SoundService.stopDialTone();
       setState(() => _state = CallState.active);
       HapticsService.success();
       _ticker = Timer.periodic(const Duration(seconds: 1), (Timer t) {
@@ -60,11 +85,17 @@ class _CallScreenState extends State<CallScreen>
   void dispose() {
     _ticker?.cancel();
     _pulse.dispose();
+    SoundService.stopDialTone();
+    SoundService.stopRingtone();
+    NotificationService.cancel(2001);
     super.dispose();
   }
 
   void _hangUp() {
     HapticsService.warning();
+    SoundService.stopDialTone();
+    SoundService.stopRingtone();
+    NotificationService.cancel(2001);
     setState(() => _state = CallState.ended);
     Future<void>.delayed(const Duration(milliseconds: 600), () {
       if (mounted) context.pop();
@@ -92,7 +123,6 @@ class _CallScreenState extends State<CallScreen>
       body: SafeArea(
         child: Stack(
           children: <Widget>[
-            // Фоновая «волна» от собеседника.
             Positioned.fill(
               child: AnimatedBuilder(
                 animation: _pulse,
@@ -288,10 +318,7 @@ class _CallButton extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 6),
-          Text(
-            label,
-            style: theme.textTheme.bodySmall,
-          ),
+          Text(label, style: theme.textTheme.bodySmall),
         ],
       ),
     );

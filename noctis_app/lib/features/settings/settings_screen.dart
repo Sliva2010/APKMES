@@ -1,4 +1,6 @@
-// Главный экран настроек.
+// Главный экран настроек NOCTIS — расширенный набор разделов.
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -6,6 +8,7 @@ import 'package:go_router/go_router.dart';
 import '../../core/animation/haptics_service.dart';
 import '../auth/auth_controller.dart';
 import '../premium/premium_state.dart';
+import '../premium/premium_badges.dart';
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
@@ -20,12 +23,25 @@ class SettingsScreen extends ConsumerWidget {
       appBar: AppBar(
         automaticallyImplyLeading: false,
         title: const Text('Настройки'),
+        actions: <Widget>[
+          IconButton(
+            icon: const Icon(Icons.search_rounded),
+            onPressed: () {
+              HapticsService.tap();
+              context.push('/search');
+            },
+          ),
+        ],
       ),
       body: SafeArea(
         child: ListView(
           padding: const EdgeInsets.fromLTRB(16, 12, 16, 96),
           children: <Widget>[
-            _ProfileCard(auth: auth, premium: premium),
+            _ProfileCard(
+              auth: auth,
+              premium: premium,
+              onTap: () => context.push('/settings/profile'),
+            ),
             const SizedBox(height: 16),
             if (!premium.active) ...<Widget>[
               _PremiumPromoCard(
@@ -36,12 +52,44 @@ class SettingsScreen extends ConsumerWidget {
             _Card(
               children: <Widget>[
                 _Tile(
+                  icon: Icons.notifications_none_rounded,
+                  title: 'Уведомления и звуки',
+                  subtitle: 'Звуки, вибрация, превью',
+                  onTap: () => context.push('/settings/notifications'),
+                ),
+                const Divider(height: 1),
+                _Tile(
                   icon: Icons.brightness_6_outlined,
                   title: 'Внешний вид',
                   subtitle: 'Темы и палитры',
                   onTap: () => context.push('/settings/appearance'),
                 ),
                 const Divider(height: 1),
+                _Tile(
+                  icon: Icons.chat_bubble_outline_rounded,
+                  title: 'Чаты',
+                  subtitle: 'Размер шрифта, отправка',
+                  onTap: () => context.push('/settings/chats'),
+                ),
+                const Divider(height: 1),
+                _Tile(
+                  icon: Icons.language_rounded,
+                  title: 'Язык',
+                  subtitle: 'Русский',
+                  onTap: () => context.push('/settings/language'),
+                ),
+                const Divider(height: 1),
+                _Tile(
+                  icon: Icons.storage_rounded,
+                  title: 'Память и данные',
+                  subtitle: 'Хранилище, кэш',
+                  onTap: () => context.push('/settings/storage'),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            _Card(
+              children: <Widget>[
                 _Tile(
                   icon: Icons.lock_outline_rounded,
                   title: 'Безопасность',
@@ -77,6 +125,15 @@ class SettingsScreen extends ConsumerWidget {
                       : 'Безлимит и эксклюзивные фичи',
                   onTap: () => context.push('/premium'),
                 ),
+                if (premium.active) ...<Widget>[
+                  const Divider(height: 1),
+                  _Tile(
+                    icon: Icons.workspace_premium_outlined,
+                    title: 'Значки рядом с именем',
+                    subtitle: 'Premium-бейджи',
+                    onTap: () => context.push('/settings/badge'),
+                  ),
+                ],
                 const Divider(height: 1),
                 _Tile(
                   icon: Icons.info_outline_rounded,
@@ -128,10 +185,15 @@ class SettingsScreen extends ConsumerWidget {
   }
 }
 
-class _ProfileCard extends StatelessWidget {
-  const _ProfileCard({required this.auth, required this.premium});
+class _ProfileCard extends ConsumerWidget {
+  const _ProfileCard({
+    required this.auth,
+    required this.premium,
+    required this.onTap,
+  });
   final AuthState auth;
   final PremiumState premium;
+  final VoidCallback onTap;
 
   String get _initials {
     final String name = auth.displayName ?? '';
@@ -142,75 +204,95 @@ class _ProfileCard extends StatelessWidget {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final ThemeData theme = Theme.of(context);
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: theme.colorScheme.surface,
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(
-          color: theme.colorScheme.outlineVariant,
-          width: 1,
-        ),
-      ),
-      child: Row(
-        children: <Widget>[
-          Container(
-            width: 64,
-            height: 64,
-            alignment: Alignment.center,
-            decoration: BoxDecoration(
-              color: theme.colorScheme.onSurface,
-              shape: BoxShape.circle,
-            ),
-            child: Text(
-              _initials,
-              style: theme.textTheme.headlineMedium?.copyWith(
-                color: theme.colorScheme.surface,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
+    final List<String> badges = ref.watch(premiumBadgesProvider);
+    return GestureDetector(
+      onTap: () {
+        HapticsService.tap();
+        onTap();
+      },
+      child: Container(
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: theme.colorScheme.surface,
+          borderRadius: BorderRadius.circular(24),
+          border: Border.all(
+            color: theme.colorScheme.outlineVariant,
+            width: 1,
           ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: <Widget>[
-                Row(
-                  children: <Widget>[
-                    Flexible(
-                      child: Text(
-                        auth.displayName ?? 'Без имени',
-                        style: theme.textTheme.titleLarge,
-                        overflow: TextOverflow.ellipsis,
+        ),
+        child: Row(
+          children: <Widget>[
+            Container(
+              width: 64,
+              height: 64,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: theme.colorScheme.onSurface,
+                shape: BoxShape.circle,
+                image: auth.avatarPath != null &&
+                        File(auth.avatarPath!).existsSync()
+                    ? DecorationImage(
+                        image: FileImage(File(auth.avatarPath!)),
+                        fit: BoxFit.cover,
+                      )
+                    : null,
+              ),
+              child: auth.avatarPath != null
+                  ? null
+                  : Text(
+                      _initials,
+                      style: theme.textTheme.headlineMedium?.copyWith(
+                        color: theme.colorScheme.surface,
+                        fontWeight: FontWeight.w700,
                       ),
                     ),
-                    if (premium.active) ...<Widget>[
-                      const SizedBox(width: 6),
-                      Icon(
-                        Icons.workspace_premium_rounded,
-                        size: 20,
-                        color: theme.colorScheme.onSurface,
-                      ),
-                    ],
-                  ],
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  auth.username == null
-                      ? auth.phoneE164 ?? '—'
-                      : '@${auth.username}',
-                  style: theme.textTheme.bodyMedium,
-                ),
-              ],
             ),
-          ),
-          Icon(
-            Icons.edit_outlined,
-            color: theme.colorScheme.onSurfaceVariant,
-          ),
-        ],
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  Row(
+                    children: <Widget>[
+                      Flexible(
+                        child: Text(
+                          auth.displayName ?? 'Без имени',
+                          style: theme.textTheme.titleLarge,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      if (premium.active) ...<Widget>[
+                        const SizedBox(width: 6),
+                        for (final String id in badges.take(4))
+                          Padding(
+                            padding: const EdgeInsets.only(left: 2),
+                            child: Icon(
+                              PremiumBadges.byId(id).icon,
+                              size: 16,
+                              color: theme.colorScheme.onSurface,
+                            ),
+                          ),
+                      ],
+                    ],
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    auth.username == null
+                        ? '—'
+                        : '@${auth.username}',
+                    style: theme.textTheme.bodyMedium,
+                  ),
+                ],
+              ),
+            ),
+            Icon(
+              Icons.edit_outlined,
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -264,7 +346,7 @@ class _PremiumPromoCard extends StatelessWidget {
                   ),
                   const SizedBox(height: 2),
                   Text(
-                    'Безлимиты, темы и расширенные инструменты',
+                    'Безлимиты, темы, бейджи и расширенные инструменты',
                     style: theme.textTheme.bodyMedium?.copyWith(
                       color: theme.colorScheme.surface.withOpacity(0.85),
                     ),

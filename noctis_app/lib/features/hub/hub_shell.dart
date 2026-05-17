@@ -1,6 +1,5 @@
-// HubShell — оболочка с премиальной нижней навигацией NOCTIS.
-// Содержит 4 главные вкладки: Чаты, Discover, Инструменты, Настройки.
-// Использует StatefulShellRoute из go_router для сохранения state между табами.
+// HubShell — нижняя навигация NOCTIS.
+// Только две вкладки: Чаты и Настройки. Без подписей, только иконки.
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
@@ -14,22 +13,10 @@ class HubShell extends StatelessWidget {
 
   static const List<_Tab> _tabs = <_Tab>[
     _Tab(
-      label: 'Чаты',
       outlined: Icons.chat_bubble_outline_rounded,
       filled: Icons.chat_bubble_rounded,
     ),
     _Tab(
-      label: 'Discover',
-      outlined: Icons.explore_outlined,
-      filled: Icons.explore_rounded,
-    ),
-    _Tab(
-      label: 'Инструменты',
-      outlined: Icons.dashboard_customize_outlined,
-      filled: Icons.dashboard_customize_rounded,
-    ),
-    _Tab(
-      label: 'Настройки',
       outlined: Icons.tune_rounded,
       filled: Icons.tune_rounded,
     ),
@@ -51,7 +38,7 @@ class HubShell extends StatelessWidget {
       bottomNavigationBar: SafeArea(
         top: false,
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(12, 4, 12, 12),
+          padding: const EdgeInsets.fromLTRB(48, 4, 48, 12),
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
             decoration: BoxDecoration(
@@ -91,12 +78,7 @@ class HubShell extends StatelessWidget {
 }
 
 class _Tab {
-  const _Tab({
-    required this.label,
-    required this.outlined,
-    required this.filled,
-  });
-  final String label;
+  const _Tab({required this.outlined, required this.filled});
   final IconData outlined;
   final IconData filled;
 }
@@ -122,42 +104,18 @@ class _NavItem extends StatelessWidget {
         duration: NoctisDurations.tap,
         curve: NoctisCurves.standard,
         height: 48,
-        margin: const EdgeInsets.symmetric(horizontal: 2),
+        margin: const EdgeInsets.symmetric(horizontal: 4),
         decoration: BoxDecoration(
-          color: selected
-              ? theme.colorScheme.onSurface
-              : Colors.transparent,
+          color: selected ? theme.colorScheme.onSurface : Colors.transparent,
           borderRadius: BorderRadius.circular(18),
         ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
-            Icon(
-              selected ? tab.filled : tab.outlined,
-              size: 20,
-              color: selected
-                  ? theme.colorScheme.surface
-                  : theme.colorScheme.onSurface,
-            ),
-            AnimatedSize(
-              duration: NoctisDurations.tap,
-              curve: NoctisCurves.standard,
-              child: selected
-                  ? Padding(
-                      padding: const EdgeInsets.only(left: 8),
-                      child: Text(
-                        tab.label,
-                        style: theme.textTheme.labelLarge?.copyWith(
-                          color: theme.colorScheme.surface,
-                          fontWeight: FontWeight.w600,
-                          fontSize: 13,
-                          letterSpacing: 0.3,
-                        ),
-                      ),
-                    )
-                  : const SizedBox.shrink(),
-            ),
-          ],
+        alignment: Alignment.center,
+        child: Icon(
+          selected ? tab.filled : tab.outlined,
+          size: 22,
+          color: selected
+              ? theme.colorScheme.surface
+              : theme.colorScheme.onSurface,
         ),
       ),
     );

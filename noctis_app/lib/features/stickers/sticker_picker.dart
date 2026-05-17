@@ -1,4 +1,6 @@
-// Палитра стикеров — пять монохромных наборов в стилистике NOCTIS.
+// Telegram-style emoji picker.
+// 8 категорий с Unicode-эмодзи: смайлы, люди, природа, еда, активность,
+// путешествия, объекты, символы, флаги.
 import 'package:flutter/material.dart';
 
 import '../../core/animation/haptics_service.dart';
@@ -8,21 +10,215 @@ class StickerPicker extends StatelessWidget {
 
   final ValueChanged<String> onPick;
 
-  static const List<List<String>> _packs = <List<String>>[
-    <String>['◼︎', '◻︎', '◼︎ ◻︎', '⬛︎', '⬜︎', '▣', '▤', '▥', '▦', '▧', '▨', '▩'],
-    <String>['☺︎', '☹︎', '♥︎', '♡', '✦', '✧', '✩', '✪', '☾', '☼', '☁︎', '☂︎'],
-    <String>['→', '←', '↑', '↓', '↗︎', '↘︎', '↪︎', '⤴︎', '✓', '✗', '★', '☆'],
-    <String>['¡', '?', '!', '...', '—', '«»', '"', '·', '•', '◦', '∞', '§'],
-    <String>['NOCTIS', 'TONIGHT', 'ONLY YOU', 'IN THE DARK', 'STAY', 'BREATHE',
-            'WHITE', 'BLACK', 'SILENCE', 'BRIGHT', 'WAIT', 'NOW'],
-  ];
-
-  static const List<String> _packLabels = <String>[
-    'Геометрия',
-    'Символы',
-    'Стрелки',
-    'Знаки',
-    'Слова',
+  static const List<_EmojiPack> _packs = <_EmojiPack>[
+    _EmojiPack(
+      icon: Icons.sentiment_satisfied_rounded,
+      label: 'Смайлы',
+      emojis: <String>[
+        '😀', '😃', '😄', '😁', '😆', '😅', '🤣', '😂',
+        '🙂', '🙃', '😉', '😊', '😇', '🥰', '😍', '🤩',
+        '😘', '😗', '☺️', '😚', '😙', '🥲', '😋', '😛',
+        '😜', '🤪', '😝', '🤑', '🤗', '🤭', '🤫', '🤔',
+        '🤐', '🤨', '😐', '😑', '😶', '😏', '😒', '🙄',
+        '😬', '🤥', '😌', '😔', '😪', '🤤', '😴', '😷',
+        '🤒', '🤕', '🤢', '🤮', '🤧', '🥵', '🥶', '🥴',
+        '😵', '🤯', '🤠', '🥳', '🥸', '😎', '🤓', '🧐',
+        '😕', '😟', '🙁', '☹️', '😮', '😯', '😲', '😳',
+        '🥺', '😦', '😧', '😨', '😰', '😥', '😢', '😭',
+        '😱', '😖', '😣', '😞', '😓', '😩', '😫', '🥱',
+        '😤', '😡', '😠', '🤬', '😈', '👿', '💀', '☠️',
+        '💩', '🤡', '👹', '👺', '👻', '👽', '👾', '🤖',
+      ],
+    ),
+    _EmojiPack(
+      icon: Icons.favorite_outline_rounded,
+      label: 'Жесты',
+      emojis: <String>[
+        '👋', '🤚', '🖐️', '✋', '🖖', '👌', '🤌', '🤏',
+        '✌️', '🤞', '🤟', '🤘', '🤙', '👈', '👉', '👆',
+        '🖕', '👇', '☝️', '👍', '👎', '✊', '👊', '🤛',
+        '🤜', '👏', '🙌', '👐', '🤲', '🤝', '🙏', '✍️',
+        '💅', '🤳', '💪', '🦾', '🦿', '🦵', '🦶', '👂',
+        '🦻', '👃', '🧠', '🫀', '🫁', '🦷', '🦴', '👀',
+        '👁️', '👅', '👄', '💋', '🩸',
+        '❤️', '🧡', '💛', '💚', '💙', '💜', '🖤', '🤍',
+        '🤎', '💔', '❣️', '💕', '💞', '💓', '💗', '💖',
+        '💘', '💝', '💟', '☮️', '✝️', '☪️', '🕉️', '☸️',
+      ],
+    ),
+    _EmojiPack(
+      icon: Icons.pets_outlined,
+      label: 'Природа',
+      emojis: <String>[
+        '🐶', '🐱', '🐭', '🐹', '🐰', '🦊', '🐻', '🐼',
+        '🐻‍❄️', '🐨', '🐯', '🦁', '🐮', '🐷', '🐽', '🐸',
+        '🐵', '🙈', '🙉', '🙊', '🐒', '🐔', '🐧', '🐦',
+        '🐤', '🐣', '🐥', '🦆', '🦅', '🦉', '🦇', '🐺',
+        '🐗', '🐴', '🦄', '🐝', '🪱', '🐛', '🦋', '🐌',
+        '🐞', '🐜', '🪰', '🪲', '🦗', '🕷️', '🦂', '🐢',
+        '🐍', '🦎', '🦖', '🦕', '🐙', '🦑', '🦐', '🦞',
+        '🦀', '🐡', '🐠', '🐟', '🐬', '🐳', '🐋', '🦈',
+        '🐊', '🐅', '🐆', '🦓', '🦍', '🦧', '🐘', '🦛',
+        '🦏', '🐪', '🐫', '🦒', '🦘', '🐃', '🐂', '🐄',
+        '🐎', '🐖', '🐏', '🐑', '🦙', '🐐', '🦌', '🐕',
+        '🐩', '🐈', '🐓', '🦃', '🦚', '🦜', '🦢', '🕊️',
+        '🌲', '🌳', '🌴', '🌱', '🌿', '☘️', '🍀', '🎋',
+        '🍃', '🍂', '🍁', '🌾', '🌺', '🌻', '🌹', '🥀',
+        '🌷', '💐', '🌸', '🌼', '🌎', '🌍', '🌏', '🌕',
+        '🌖', '🌗', '🌘', '🌑', '🌒', '🌓', '🌔', '🌙',
+        '🌛', '🌜', '☀️', '🌝', '🌞', '⭐', '🌟', '✨',
+        '⚡', '☄️', '💥', '🔥', '🌪️', '🌈', '☁️', '⛅',
+        '⛈️', '🌤️', '🌥️', '🌦️', '🌧️', '⛄', '☃️', '❄️',
+        '💧', '💦', '🌊',
+      ],
+    ),
+    _EmojiPack(
+      icon: Icons.restaurant_outlined,
+      label: 'Еда',
+      emojis: <String>[
+        '🍏', '🍎', '🍐', '🍊', '🍋', '🍌', '🍉', '🍇',
+        '🍓', '🫐', '🍈', '🍒', '🍑', '🥭', '🍍', '🥥',
+        '🥝', '🍅', '🍆', '🥑', '🥦', '🥬', '🥒', '🌶️',
+        '🫑', '🌽', '🥕', '🫒', '🧄', '🧅', '🥔', '🍠',
+        '🥐', '🥯', '🍞', '🥖', '🥨', '🧀', '🥚', '🍳',
+        '🧈', '🥞', '🧇', '🥓', '🥩', '🍗', '🍖', '🌭',
+        '🍔', '🍟', '🍕', '🥪', '🥙', '🧆', '🌮', '🌯',
+        '🫔', '🥗', '🥘', '🫕', '🥫', '🍝', '🍜', '🍲',
+        '🍛', '🍣', '🍱', '🥟', '🦪', '🍤', '🍙', '🍚',
+        '🍘', '🍥', '🥠', '🥮', '🍢', '🍡', '🍧', '🍨',
+        '🍦', '🥧', '🧁', '🍰', '🎂', '🍮', '🍭', '🍬',
+        '🍫', '🍿', '🍩', '🍪', '🌰', '🥜', '🍯', '🥛',
+        '🍼', '☕', '🍵', '🧃', '🥤', '🧋', '🍶', '🍺',
+        '🍻', '🥂', '🍷', '🥃', '🍸', '🍹', '🧉', '🍾',
+      ],
+    ),
+    _EmojiPack(
+      icon: Icons.sports_esports_outlined,
+      label: 'Активность',
+      emojis: <String>[
+        '⚽', '🏀', '🏈', '⚾', '🥎', '🎾', '🏐', '🏉',
+        '🥏', '🎱', '🪀', '🏓', '🏸', '🏒', '🏑', '🥍',
+        '🏏', '🪃', '🥅', '⛳', '🪁', '🏹', '🎣', '🤿',
+        '🥊', '🥋', '🎽', '🛹', '🛼', '🛷', '⛸️', '🥌',
+        '🎿', '⛷️', '🏂', '🪂', '🏋️', '🤼', '🤸', '⛹️',
+        '🤺', '🤾', '🏌️', '🏇', '🧘', '🏄', '🏊', '🤽',
+        '🚣', '🧗', '🚵', '🚴', '🏆', '🥇', '🥈', '🥉',
+        '🏅', '🎖️', '🏵️', '🎗️', '🎫', '🎟️', '🎪', '🤹',
+        '🎭', '🎨', '🎬', '🎤', '🎧', '🎼', '🎹', '🥁',
+        '🪘', '🎷', '🎺', '🪗', '🎸', '🪕', '🎻', '🎲',
+        '♟️', '🎯', '🎳', '🎮', '🎰', '🧩',
+      ],
+    ),
+    _EmojiPack(
+      icon: Icons.flight_outlined,
+      label: 'Путешествия',
+      emojis: <String>[
+        '🚗', '🚕', '🚙', '🚌', '🚎', '🏎️', '🚓', '🚑',
+        '🚒', '🚐', '🛻', '🚚', '🚛', '🚜', '🛵', '🏍️',
+        '🛺', '🚲', '🛴', '🛹', '🛼', '🚏', '🛣️', '🛤️',
+        '🛢️', '⛽', '🚨', '🚥', '🚦', '🛑', '🚧', '⚓',
+        '⛵', '🛶', '🚤', '🛳️', '⛴️', '🛥️', '🚢', '✈️',
+        '🛩️', '🛫', '🛬', '🪂', '💺', '🚁', '🚟', '🚠',
+        '🚡', '🛰️', '🚀', '🛸', '🛎️', '🧳', '⌛', '⏳',
+        '⌚', '⏰', '⏱️', '⏲️', '🕰️', '🌐', '🗺️', '🗾',
+        '🧭', '🏔️', '⛰️', '🌋', '🗻', '🏕️', '🏖️', '🏜️',
+        '🏝️', '🏞️', '🏟️', '🏛️', '🏗️', '🧱', '🪨', '🪵',
+        '🛖', '🏘️', '🏚️', '🏠', '🏡', '🏢', '🏣', '🏤',
+        '🏥', '🏦', '🏨', '🏩', '🏪', '🏫', '🏬', '🏭',
+        '🏯', '🏰', '💒', '🗼', '🗽', '⛪', '🕌', '🛕',
+        '🕍', '⛩️', '🕋', '⛲', '⛺', '🌁', '🌃', '🏙️',
+        '🌄', '🌅', '🌆', '🌇', '🌉', '🎠', '🎡', '🎢',
+      ],
+    ),
+    _EmojiPack(
+      icon: Icons.lightbulb_outline_rounded,
+      label: 'Объекты',
+      emojis: <String>[
+        '⌚', '📱', '📲', '💻', '⌨️', '🖥️', '🖨️', '🖱️',
+        '🖲️', '🕹️', '🗜️', '💽', '💾', '💿', '📀', '📼',
+        '📷', '📸', '📹', '🎥', '📽️', '🎞️', '📞', '☎️',
+        '📟', '📠', '📺', '📻', '🎙️', '🎚️', '🎛️', '🧭',
+        '⏱️', '⏲️', '⏰', '🕰️', '⌛', '⏳', '📡', '🔋',
+        '🔌', '💡', '🔦', '🕯️', '🪔', '🧯', '🛢️', '💸',
+        '💵', '💴', '💶', '💷', '🪙', '💰', '💳', '💎',
+        '⚖️', '🪜', '🧰', '🪛', '🔧', '🔨', '⚒️', '🛠️',
+        '⛏️', '🪚', '🔩', '⚙️', '🪤', '🧱', '⛓️', '🧲',
+        '🔫', '💣', '🧨', '🪓', '🔪', '🗡️', '⚔️', '🛡️',
+        '🚬', '⚰️', '🪦', '⚱️', '🏺', '🔮', '📿', '🧿',
+        '💈', '⚗️', '🔭', '🔬', '🕳️', '🩹', '🩺', '💊',
+        '💉', '🩸', '🧬', '🦠', '🧫', '🧪', '🌡️', '🧹',
+        '🧺', '🧻', '🚽', '🚰', '🚿', '🛁', '🛀', '🧼',
+        '🪥', '🪒', '🧽', '🪣', '🧴', '🛎️', '🔑', '🗝️',
+        '🚪', '🪑', '🛏️', '🛋️', '🪞', '🪟', '🛍️', '🛒',
+        '🎁', '🎈', '🎏', '🎀', '🪄', '🪅', '🎊', '🎉',
+        '🎎', '🏮', '🎐', '🪆', '✉️', '📩', '📨', '📧',
+        '💌', '📥', '📤', '📦', '🏷️', '📪', '📫', '📬',
+        '📭', '📮', '📯', '📜', '📃', '📄', '📑', '🧾',
+        '📊', '📈', '📉', '🗒️', '🗓️', '📆', '📅', '🗑️',
+        '📇', '🗃️', '🗳️', '🗄️', '📋', '📁', '📂', '🗂️',
+        '🗞️', '📰', '📓', '📔', '📒', '📕', '📗', '📘',
+        '📙', '📚', '📖', '🔖', '🧷', '🔗', '📎', '🖇️',
+        '📐', '📏', '🧮', '📌', '📍', '✂️', '🖊️', '🖋️',
+        '✒️', '🖌️', '🖍️', '📝', '✏️', '🔍', '🔎', '🔏',
+        '🔐', '🔒', '🔓',
+      ],
+    ),
+    _EmojiPack(
+      icon: Icons.tag_rounded,
+      label: 'Символы',
+      emojis: <String>[
+        '❤️', '🧡', '💛', '💚', '💙', '💜', '🖤', '🤍',
+        '🤎', '💔', '❣️', '💕', '💞', '💓', '💗', '💖',
+        '💘', '💝', '💟', '☮️', '✝️', '☪️', '🕉️', '☸️',
+        '✡️', '🔯', '🕎', '☯️', '☦️', '🛐', '⛎', '♈',
+        '♉', '♊', '♋', '♌', '♍', '♎', '♏', '♐',
+        '♑', '♒', '♓', '🆔', '⚛️', '🉑', '☢️', '☣️',
+        '📴', '📳', '🈶', '🈚', '🈸', '🈺', '🈷️', '✴️',
+        '🆚', '💮', '🉐', '㊙️', '㊗️', '🈴', '🈵', '🈹',
+        '🈲', '🅰️', '🅱️', '🆎', '🆑', '🅾️', '🆘', '❌',
+        '⭕', '🛑', '⛔', '📛', '🚫', '💯', '💢', '♨️',
+        '🚷', '🚯', '🚳', '🚱', '🔞', '📵', '🚭', '❗',
+        '❕', '❓', '❔', '‼️', '⁉️', '🔅', '🔆', '〽️',
+        '⚠️', '🚸', '🔱', '⚜️', '🔰', '♻️', '✅', '🈯',
+        '💹', '❇️', '✳️', '❎', '🌐', '💠', 'Ⓜ️', '🌀',
+        '💤', '🏧', '🚾', '♿', '🅿️', '🛗', '🈳', '🈂️',
+        '🛂', '🛃', '🛄', '🛅', '🚹', '🚺', '🚼', '⚧',
+        '🚻', '🚮', '🎦', '📶', '🈁', '🔣', 'ℹ️', '🔤',
+        '🔡', '🔠', '🆖', '🆗', '🆙', '🆒', '🆕', '🆓',
+        '0️⃣', '1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣', '6️⃣', '7️⃣',
+        '8️⃣', '9️⃣', '🔟', '🔢', '#️⃣', '*️⃣', '⏏️', '▶️',
+        '⏸️', '⏯️', '⏹️', '⏺️', '⏭️', '⏮️', '⏩', '⏪',
+        '⏫', '⏬', '◀️', '🔼', '🔽', '➡️', '⬅️', '⬆️',
+        '⬇️', '↗️', '↘️', '↙️', '↖️', '↕️', '↔️', '↪️',
+        '↩️', '⤴️', '⤵️', '🔀', '🔁', '🔂', '🔄', '🔃',
+        '🎵', '🎶', '➕', '➖', '➗', '✖️', '♾️', '💲',
+        '💱', '™️', '©️', '®️', '〰️', '➰', '➿', '🔚',
+        '🔙', '🔛', '🔝', '🔜', '✔️', '☑️', '🔘', '🔴',
+        '🟠', '🟡', '🟢', '🔵', '🟣', '⚫', '⚪', '🟤',
+        '🔺', '🔻', '🔸', '🔹', '🔶', '🔷', '🔳', '🔲',
+        '▪️', '▫️', '◾', '◽', '◼️', '◻️', '⬛', '⬜',
+        '🟥', '🟧', '🟨', '🟩', '🟦', '🟪', '🟫', '🔈',
+        '🔇', '🔉', '🔊', '🔔', '🔕', '📣', '📢', '👁‍🗨',
+        '💬', '💭', '🗯️', '♠️', '♣️', '♥️', '♦️', '🃏',
+        '🎴', '🀄', '🕐', '🕑', '🕒', '🕓', '🕔', '🕕',
+        '🕖', '🕗', '🕘', '🕙', '🕚', '🕛',
+      ],
+    ),
+    _EmojiPack(
+      icon: Icons.flag_outlined,
+      label: 'Флаги',
+      emojis: <String>[
+        '🏳️', '🏴', '🏁', '🚩', '🏳️‍🌈', '🏳️‍⚧️', '🏴‍☠️',
+        '🇷🇺', '🇺🇸', '🇬🇧', '🇩🇪', '🇫🇷', '🇪🇸', '🇮🇹', '🇵🇹',
+        '🇨🇳', '🇯🇵', '🇰🇷', '🇮🇳', '🇧🇷', '🇨🇦', '🇦🇺', '🇲🇽',
+        '🇹🇷', '🇮🇱', '🇸🇦', '🇦🇪', '🇪🇬', '🇿🇦', '🇳🇬', '🇰🇪',
+        '🇺🇦', '🇧🇾', '🇰🇿', '🇺🇿', '🇰🇬', '🇦🇲', '🇦🇿', '🇬🇪',
+        '🇵🇱', '🇨🇿', '🇸🇰', '🇭🇺', '🇷🇴', '🇧🇬', '🇷🇸', '🇭🇷',
+        '🇸🇮', '🇧🇦', '🇦🇱', '🇲🇰', '🇲🇪', '🇽🇰', '🇬🇷', '🇨🇾',
+        '🇫🇮', '🇸🇪', '🇳🇴', '🇩🇰', '🇮🇸', '🇪🇪', '🇱🇻', '🇱🇹',
+        '🇳🇱', '🇧🇪', '🇱🇺', '🇨🇭', '🇦🇹', '🇮🇪', '🇲🇹', '🇲🇨',
+      ],
+    ),
   ];
 
   @override
@@ -33,7 +229,7 @@ class StickerPicker extends StatelessWidget {
       child: SafeArea(
         top: false,
         child: SizedBox(
-          height: 340,
+          height: 380,
           child: Column(
             children: <Widget>[
               const SizedBox(height: 8),
@@ -45,32 +241,35 @@ class StickerPicker extends StatelessWidget {
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
+              const SizedBox(height: 8),
               TabBar(
                 isScrollable: true,
                 indicatorColor: theme.colorScheme.onSurface,
+                indicatorWeight: 2,
                 labelColor: theme.colorScheme.onSurface,
                 unselectedLabelColor: theme.colorScheme.onSurfaceVariant,
-                labelStyle: theme.textTheme.labelLarge,
+                tabAlignment: TabAlignment.start,
                 tabs: <Widget>[
-                  for (final String l in _packLabels) Tab(text: l),
+                  for (final _EmojiPack p in _packs)
+                    Tab(icon: Icon(p.icon, size: 22), height: 40),
                 ],
               ),
               Expanded(
                 child: TabBarView(
                   children: <Widget>[
-                    for (final List<String> pack in _packs)
+                    for (final _EmojiPack pack in _packs)
                       GridView.count(
-                        padding: const EdgeInsets.all(12),
-                        crossAxisCount: 4,
-                        mainAxisSpacing: 8,
-                        crossAxisSpacing: 8,
+                        padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
+                        crossAxisCount: 8,
+                        mainAxisSpacing: 4,
+                        crossAxisSpacing: 4,
                         children: <Widget>[
-                          for (final String s in pack)
-                            _StickerCell(
-                              text: s,
+                          for (final String e in pack.emojis)
+                            _EmojiCell(
+                              emoji: e,
                               onTap: () {
                                 HapticsService.selection();
-                                onPick(s);
+                                onPick(e);
                               },
                             ),
                         ],
@@ -86,41 +285,32 @@ class StickerPicker extends StatelessWidget {
   }
 }
 
-class _StickerCell extends StatelessWidget {
-  const _StickerCell({required this.text, required this.onTap});
-  final String text;
+class _EmojiPack {
+  const _EmojiPack({
+    required this.icon,
+    required this.label,
+    required this.emojis,
+  });
+  final IconData icon;
+  final String label;
+  final List<String> emojis;
+}
+
+class _EmojiCell extends StatelessWidget {
+  const _EmojiCell({required this.emoji, required this.onTap});
+  final String emoji;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    final ThemeData theme = Theme.of(context);
-    final bool isWord = text.length > 4;
-    return Material(
-      color: theme.colorScheme.surface,
-      borderRadius: BorderRadius.circular(16),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(16),
-        child: Container(
-          alignment: Alignment.center,
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(
-              color: theme.colorScheme.outlineVariant,
-              width: 1,
-            ),
-          ),
-          child: Text(
-            text,
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              fontFamily: 'NoctisSans',
-              fontSize: isWord ? 14 : 30,
-              fontWeight: isWord ? FontWeight.w700 : FontWeight.w500,
-              letterSpacing: isWord ? 1.5 : 0,
-              color: theme.colorScheme.onSurface,
-            ),
-          ),
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(8),
+      child: Container(
+        alignment: Alignment.center,
+        child: Text(
+          emoji,
+          style: const TextStyle(fontSize: 28),
         ),
       ),
     );

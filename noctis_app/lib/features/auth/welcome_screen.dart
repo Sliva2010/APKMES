@@ -109,20 +109,9 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                     label: 'Создать аккаунт',
                     onPressed: () {
                       HapticsService.tap();
-                      context.push('/phone');
+                      context.push('/register');
                     },
                     icon: Icons.arrow_forward_rounded,
-                  ),
-                ),
-                const SizedBox(height: 12),
-                FadeTransition(
-                  opacity: _fadeIn,
-                  child: _GhostButton(
-                    label: 'У меня уже есть аккаунт',
-                    onTap: () {
-                      HapticsService.tap();
-                      context.push('/phone');
-                    },
                   ),
                 ),
                 const SizedBox(height: 14),
@@ -239,35 +228,3 @@ class _HighlightCard extends StatelessWidget {
   }
 }
 
-class _GhostButton extends StatelessWidget {
-  const _GhostButton({required this.label, required this.onTap});
-  final String label;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final ThemeData theme = Theme.of(context);
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        height: 52,
-        alignment: Alignment.center,
-        decoration: BoxDecoration(
-          color: theme.colorScheme.surface,
-          borderRadius: BorderRadius.circular(18),
-          border: Border.all(
-            color: theme.colorScheme.outlineVariant,
-            width: 1,
-          ),
-        ),
-        child: Text(
-          label,
-          style: theme.textTheme.labelLarge?.copyWith(
-            color: theme.colorScheme.onSurface,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-      ),
-    );
-  }
-}

@@ -1,57 +1,43 @@
-// Контроллер аутентификации.
-//
-// Если `--dart-define=BACKEND_URL=...` задан — выполняет реальные REST-запросы
-// к NOCTIS-бэкенду. В демо-режиме (URL пуст) принимает код `000000`.
+// Контроллер аутентификации NOCTIS — регистрация без телефона.
+// Достаточно имени, никнейма и (опционально) аватарки.
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
-import '../../core/network/auth_api.dart';
-import '../../core/network/backend_config.dart';
-
-enum AuthStatus { unauthenticated, codeSent, profilePending, authenticated }
+enum AuthStatus { unauthenticated, authenticated }
 
 @immutable
 class AuthState {
   const AuthState({
     required this.status,
-    this.phoneE164,
     this.displayName,
     this.username,
-    this.errorCode,
-    this.access,
-    this.refresh,
-    this.userId,
+    this.avatarPath,
+    this.bio,
   });
 
   final AuthStatus status;
-  final String? phoneE164;
   final String? displayName;
   final String? username;
-  final String? errorCode;
-  final String? access;
-  final String? refresh;
-  final int? userId;
+
+  /// Локальный путь к файлу с аватаркой (image_picker сохраняет его в кэш).
+  final String? avatarPath;
+  final String? bio;
 
   AuthState copyWith({
     AuthStatus? status,
-    String? phoneE164,
     String? displayName,
     String? username,
-    String? errorCode,
-    String? access,
-    String? refresh,
-    int? userId,
-    bool clearError = false,
+    String? avatarPath,
+    String? bio,
+    bool clearAvatar = false,
   }) {
     return AuthState(
       status: status ?? this.status,
-      phoneE164: phoneE164 ?? this.phoneE164,
       displayName: displayName ?? this.displayName,
       username: username ?? this.username,
-      errorCode: clearError ? null : (errorCode ?? this.errorCode),
-      access: access ?? this.access,
-      refresh: refresh ?? this.refresh,
-      userId: userId ?? this.userId,
+      avatarPath: clearAvatar ? null : (avatarPath ?? this.avatarPath),
+      bio: bio ?? this.bio,
     );
   }
 
@@ -60,82 +46,92 @@ class AuthState {
 }
 
 class AuthController extends StateNotifier<AuthState> {
-  AuthController() : super(AuthState.initial);
-
-  static const String mockOtp = '000000';
-  final AuthApi _api = AuthApi();
-
-  Future<void> requestCode(String phoneE164) async {
-    state = state.copyWith(clearError: true);
-    if (BackendConfig.isConfigured) {
-      try {
-        await _api.startPhone(phoneE164);
-      } catch (_) {
-        // Сетевая ошибка не блокирует UX — пользователь всё равно перейдёт
-        // на экран кода. Реальный backend отдаст ошибку при verify.
-      }
-    } else {
-      await Future<void>.delayed(const Duration(milliseconds: 600));
-    }
-    state = state.copyWith(
-      status: AuthStatus.codeSent,
-      phoneE164: phoneE164,
-      clearError: true,
-    );
+  AuthController() : super(AuthState.initial) {
+    _restore();
   }
 
-  Future<bool> verifyCode(String code) async {
-    final String phone = state.phoneE164 ?? '';
-    if (BackendConfig.isConfigured) {
-      try {
-        final TokenPair pair = await _api.verifyPhone(phone, code.trim());
-        state = state.copyWith(
-          status: AuthStatus.profilePending,
-          access: pair.access,
-          refresh: pair.refresh,
-          userId: pair.userId,
-          clearError: true,
+  static const String _kName = 'noctis.auth.name';
+  static const String _kUsername = 'noctis.auth.username';
+  static const String _kAvatar = 'noctis.auth.avatar';
+  static const String _kBio = 'noctis.auth.bio';
+
+  Future<void> _restore() async {
+    try {
+      final SharedPreferences prefs = await SharedPreferences.getInstance();
+      final String? name = prefs.getString(_kName);
+      final String? username = prefs.getString(_kUsername);
+      if (name != null && username != null) {
+        state = AuthState(
+          status: AuthStatus.authenticated,
+          displayName: name,
+          username: username,
+          avatarPath: prefs.getString(_kAvatar),
+          bio: prefs.getString(_kBio),
         );
-        return true;
-      } catch (_) {
-        state = state.copyWith(errorCode: 'INVALID_OTP');
-        return false;
       }
+    } catch (_) {
+      // Игнорируем ошибки persistence — фолбэк на анонимный старт.
     }
-
-    await Future<void>.delayed(const Duration(milliseconds: 500));
-    if (code.trim() == mockOtp) {
-      state = state.copyWith(
-        status: AuthStatus.profilePending,
-        clearError: true,
-      );
-      return true;
-    }
-    state = state.copyWith(errorCode: 'INVALID_OTP');
-    return false;
   }
 
-  Future<void> completeProfile({
+  Future<void> _persist() async {
+    try {
+      final SharedPreferences prefs = await SharedPreferences.getInstance();
+      await prefs.setString(_kName, state.displayName ?? '');
+      await prefs.setString(_kUsername, state.username ?? '');
+      if (state.avatarPath != null) {
+        await prefs.setString(_kAvatar, state.avatarPath!);
+      } else {
+        await prefs.remove(_kAvatar);
+      }
+      if (state.bio != null) {
+        await prefs.setString(_kBio, state.bio!);
+      } else {
+        await prefs.remove(_kBio);
+      }
+    } catch (_) {}
+  }
+
+  Future<void> register({
     required String displayName,
     required String username,
+    String? avatarPath,
   }) async {
-    await Future<void>.delayed(const Duration(milliseconds: 300));
-    state = state.copyWith(
+    state = AuthState(
       status: AuthStatus.authenticated,
       displayName: displayName,
       username: username,
-      clearError: true,
+      avatarPath: avatarPath,
     );
+    await _persist();
+  }
+
+  Future<void> updateProfile({
+    String? displayName,
+    String? username,
+    String? avatarPath,
+    String? bio,
+    bool clearAvatar = false,
+  }) async {
+    state = state.copyWith(
+      displayName: displayName,
+      username: username,
+      avatarPath: avatarPath,
+      bio: bio,
+      clearAvatar: clearAvatar,
+    );
+    await _persist();
   }
 
   Future<void> logout() async {
     state = AuthState.initial;
-  }
-
-  @override
-  void dispose() {
-    _api.close();
-    super.dispose();
+    try {
+      final SharedPreferences prefs = await SharedPreferences.getInstance();
+      await prefs.remove(_kName);
+      await prefs.remove(_kUsername);
+      await prefs.remove(_kAvatar);
+      await prefs.remove(_kBio);
+    } catch (_) {}
   }
 }
 
