@@ -33,24 +33,10 @@ class ChatListScreen extends ConsumerWidget {
             },
           ),
           IconButton(
-            icon: const Icon(Icons.explore_outlined),
+            icon: const Icon(Icons.edit_outlined),
             onPressed: () {
               HapticsService.tap();
-              context.push('/discover');
-            },
-          ),
-          IconButton(
-            icon: const Icon(Icons.dashboard_customize_outlined),
-            onPressed: () {
-              HapticsService.tap();
-              context.push('/tools');
-            },
-          ),
-          IconButton(
-            icon: const Icon(Icons.tune_rounded),
-            onPressed: () {
-              HapticsService.tap();
-              context.push('/settings');
+              context.push('/chats/new');
             },
           ),
         ],
@@ -95,19 +81,22 @@ class ChatListScreen extends ConsumerWidget {
                 },
               ),
             ),
-            const SliverToBoxAdapter(child: SizedBox(height: 80)),
+            const SliverToBoxAdapter(child: SizedBox(height: 100)),
           ],
         ),
       ),
-      floatingActionButton: FloatingActionButton(
-        backgroundColor: theme.colorScheme.primary,
-        foregroundColor: theme.colorScheme.onPrimary,
-        elevation: 0,
-        onPressed: () {
-          HapticsService.tap();
-          context.push('/chats/new');
-        },
-        child: const Icon(Icons.edit_rounded),
+      floatingActionButton: Padding(
+        padding: const EdgeInsets.only(bottom: 64),
+        child: FloatingActionButton(
+          backgroundColor: theme.colorScheme.primary,
+          foregroundColor: theme.colorScheme.onPrimary,
+          elevation: 0,
+          onPressed: () {
+            HapticsService.tap();
+            context.push('/chats/new');
+          },
+          child: const Icon(Icons.edit_rounded),
+        ),
       ),
     );
   }
