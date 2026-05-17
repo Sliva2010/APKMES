@@ -8,6 +8,8 @@ import 'package:intl/intl.dart';
 
 import '../../core/animation/durations_curves.dart';
 import '../../core/animation/haptics_service.dart';
+import '../calls/call_screen.dart';
+import '../media/voice_recorder.dart';
 import '../stickers/sticker_picker.dart';
 import 'chat_repository.dart';
 
@@ -115,6 +117,59 @@ class _DirectChatScreenState extends ConsumerState<DirectChatScreen> {
         );
       }
     });
+  }
+
+  void _sendVoice(VoiceRecorderResult voice) {
+    HapticsService.tap();
+    final ChatSummary chat = ref.read(chatListProvider).firstWhere(
+          (ChatSummary c) => c.id == widget.chatId,
+          orElse: () => ChatSummary(
+            id: widget.chatId,
+            title: 'Чат',
+            lastMessage: '',
+            lastMessageAt: DateTime.now(),
+            unread: 0,
+          ),
+        );
+    final Map<String, List<ChatMessage>> map =
+        ref.read(chatMessagesProvider.notifier).state;
+    final List<ChatMessage> list =
+        List<ChatMessage>.from(map[widget.chatId] ?? <ChatMessage>[]);
+    final DateTime now = DateTime.now();
+    list.add(
+      ChatMessage(
+        id: 'voice-${now.microsecondsSinceEpoch}',
+        fromMe: true,
+        text: 'Голосовое сообщение',
+        sentAt: now,
+        read: false,
+        voiceWaveform: voice.waveform,
+        voiceDurationMs: voice.duration.inMilliseconds,
+        expiresAt: chat.ttlSeconds == null
+            ? null
+            : now.add(Duration(seconds: chat.ttlSeconds!)),
+      ),
+    );
+    ref.read(chatMessagesProvider.notifier).state = <String, List<ChatMessage>>{
+      ...map,
+      widget.chatId: list,
+    };
+    setState(() {});
+  }
+
+  void _openVoiceRecorder() {
+    final ThemeData theme = Theme.of(context);
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: theme.colorScheme.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (BuildContext sheetCtx) => VoiceRecorderSheet(
+        onComplete: _sendVoice,
+      ),
+    );
   }
 
   void _toggleReaction(ChatMessage m, String emoji) {
@@ -383,8 +438,33 @@ class _DirectChatScreenState extends ConsumerState<DirectChatScreen> {
             onPressed: _showTtlPicker,
           ),
           IconButton(
+            icon: const Icon(Icons.videocam_outlined),
+            onPressed: () {
+              HapticsService.tap();
+              Navigator.of(context).push(
+                MaterialPageRoute<void>(
+                  builder: (BuildContext _) => CallScreen(
+                    contactName: chat.title,
+                    contactInitials: chat.initials,
+                    video: true,
+                  ),
+                ),
+              );
+            },
+          ),
+          IconButton(
             icon: const Icon(Icons.call_outlined),
-            onPressed: () => HapticsService.tap(),
+            onPressed: () {
+              HapticsService.tap();
+              Navigator.of(context).push(
+                MaterialPageRoute<void>(
+                  builder: (BuildContext _) => CallScreen(
+                    contactName: chat.title,
+                    contactInitials: chat.initials,
+                  ),
+                ),
+              );
+            },
           ),
         ],
       ),
@@ -426,6 +506,7 @@ class _DirectChatScreenState extends ConsumerState<DirectChatScreen> {
               controller: _composer,
               focusNode: _focusNode,
               onSend: _send,
+              onMicTap: _openVoiceRecorder,
               ttlSeconds: chat.ttlSeconds,
             ),
           ],
@@ -577,11 +658,14 @@ class _MessageBubble extends StatelessWidget {
                         overflow: TextOverflow.ellipsis,
                       ),
                     ),
-                  Text(
-                    message.text,
-                    style: theme.textTheme.bodyLarge
-                        ?.copyWith(color: fg, height: 1.35),
-                  ),
+                  if (message.isVoice)
+                    _VoicePlayer(message: message, fg: fg)
+                  else
+                    Text(
+                      message.text,
+                      style: theme.textTheme.bodyLarge
+                          ?.copyWith(color: fg, height: 1.35),
+                    ),
                   const SizedBox(height: 4),
                   Row(
                     mainAxisSize: MainAxisSize.min,
@@ -658,6 +742,115 @@ class _MessageBubble extends StatelessWidget {
   }
 }
 
+class _VoicePlayer extends StatefulWidget {
+  const _VoicePlayer({required this.message, required this.fg});
+  final ChatMessage message;
+  final Color fg;
+
+  @override
+  State<_VoicePlayer> createState() => _VoicePlayerState();
+}
+
+class _VoicePlayerState extends State<_VoicePlayer>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _c;
+
+  @override
+  void initState() {
+    super.initState();
+    _c = AnimationController(
+      vsync: this,
+      duration: Duration(milliseconds: widget.message.voiceDurationMs ?? 1000),
+    );
+  }
+
+  @override
+  void dispose() {
+    _c.dispose();
+    super.dispose();
+  }
+
+  void _toggle() {
+    HapticsService.tap();
+    if (_c.isAnimating) {
+      _c.stop();
+      setState(() {});
+    } else {
+      if (_c.value >= 1) _c.value = 0;
+      _c.forward();
+      setState(() {});
+    }
+  }
+
+  String _format(int ms) {
+    final int s = ms ~/ 1000;
+    return '${(s ~/ 60).toString().padLeft(2, '0')}:${(s % 60).toString().padLeft(2, '0')}';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: 220,
+      child: Row(
+        children: <Widget>[
+          GestureDetector(
+            onTap: _toggle,
+            child: Container(
+              width: 40,
+              height: 40,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: widget.fg.withOpacity(0.15),
+                shape: BoxShape.circle,
+              ),
+              child: AnimatedBuilder(
+                animation: _c,
+                builder: (BuildContext _, Widget? __) => Icon(
+                  _c.isAnimating
+                      ? Icons.pause_rounded
+                      : Icons.play_arrow_rounded,
+                  color: widget.fg,
+                  size: 24,
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: AnimatedBuilder(
+              animation: _c,
+              builder: (BuildContext _, Widget? __) {
+                return SizedBox(
+                  height: 36,
+                  child: CustomPaint(
+                    painter: WaveformPainter(
+                      samples: widget.message.voiceWaveform!,
+                      color: widget.fg,
+                      played: _c.value,
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+          const SizedBox(width: 6),
+          Text(
+            _format(widget.message.voiceDurationMs ?? 0),
+            style: TextStyle(
+              fontFamily: 'NoctisSans',
+              fontSize: 11,
+              color: widget.fg.withOpacity(0.85),
+              fontFeatures: const <FontFeature>[
+                FontFeature.tabularFigures(),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _ReplyPreview extends StatelessWidget {
   const _ReplyPreview({required this.message, required this.onClose});
   final ChatMessage message;
@@ -710,12 +903,14 @@ class _Composer extends StatefulWidget {
     required this.controller,
     required this.focusNode,
     required this.onSend,
+    required this.onMicTap,
     required this.ttlSeconds,
   });
 
   final TextEditingController controller;
   final FocusNode focusNode;
   final VoidCallback onSend;
+  final VoidCallback onMicTap;
   final int? ttlSeconds;
 
   @override
@@ -817,7 +1012,10 @@ class _ComposerState extends State<_Composer> {
                 : IconButton(
                     key: const ValueKey<String>('mic'),
                     icon: const Icon(Icons.mic_none_rounded),
-                    onPressed: () => HapticsService.tap(),
+                    onPressed: () {
+                      HapticsService.selection();
+                      widget.onMicTap();
+                    },
                   ),
           ),
         ],

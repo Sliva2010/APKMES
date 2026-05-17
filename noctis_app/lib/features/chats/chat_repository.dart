@@ -74,6 +74,8 @@ class ChatMessage {
     this.replyToText,
     this.reactions = const <String>[],
     this.expiresAt,
+    this.voiceWaveform,
+    this.voiceDurationMs,
   });
 
   final String id;
@@ -87,6 +89,12 @@ class ChatMessage {
 
   /// Точное время удаления; null — без TTL.
   final DateTime? expiresAt;
+
+  /// Если задано — сообщение является голосовым.
+  final List<double>? voiceWaveform;
+  final int? voiceDurationMs;
+
+  bool get isVoice => voiceWaveform != null;
 
   ChatMessage copyWith({
     String? text,
@@ -104,6 +112,8 @@ class ChatMessage {
       replyToText: replyToText,
       reactions: reactions ?? this.reactions,
       expiresAt: expiresAt ?? this.expiresAt,
+      voiceWaveform: voiceWaveform,
+      voiceDurationMs: voiceDurationMs,
     );
   }
 }
